@@ -1,12 +1,13 @@
 #pragma once
 
+#include <cstdint>
 #include <string_view>
 
 namespace c3::logging {
 
-enum class Level { Debug = 0, Info, Warn, Error };
+enum class Level : uint8_t { Debug = 0, Info, Warn, Error };
 
-inline constexpr std::string_view to_string(Level level) noexcept {
+constexpr std::string_view to_string(Level level) noexcept {
   switch (level) {
     case Level::Debug:
       return "debug";
@@ -21,7 +22,7 @@ inline constexpr std::string_view to_string(Level level) noexcept {
 }
 
 // sd-daemon priority prefix, parsed by journald when SyslogLevelPrefix=yes (the default).
-inline constexpr std::string_view to_priority_prefix(Level level) noexcept {
+constexpr std::string_view to_priority_prefix(Level level) noexcept {
   switch (level) {
     case Level::Debug:
       return "<7>";
@@ -36,7 +37,7 @@ inline constexpr std::string_view to_priority_prefix(Level level) noexcept {
 }
 
 // ASCII terminal colors.
-inline constexpr const char* to_ascii_color(Level level) noexcept {
+constexpr const char* to_ascii_color(Level level) noexcept {
   switch (level) {
     case Level::Debug:
       return "39";
@@ -80,19 +81,19 @@ class ScopedSink {
 
 bool write(Level level, std::string_view tag, std::string_view message) noexcept;
 
-inline constexpr void debug(std::string_view tag, std::string_view message) noexcept {
+constexpr void debug(std::string_view tag, std::string_view message) noexcept {
   write(Level::Debug, tag, message);
 }
 
-inline constexpr void info(std::string_view tag, std::string_view message) noexcept {
+constexpr void info(std::string_view tag, std::string_view message) noexcept {
   write(Level::Info, tag, message);
 }
 
-inline constexpr void warn(std::string_view tag, std::string_view message) noexcept {
+constexpr void warn(std::string_view tag, std::string_view message) noexcept {
   write(Level::Warn, tag, message);
 }
 
-inline constexpr void error(std::string_view tag, std::string_view message) noexcept {
+constexpr void error(std::string_view tag, std::string_view message) noexcept {
   write(Level::Error, tag, message);
 }
 

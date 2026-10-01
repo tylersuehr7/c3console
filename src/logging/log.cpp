@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <cstdio>
-#include <string>
 
 #include "utils/fixed_text.hpp"
 
@@ -35,7 +34,7 @@ bool write(Level level, std::string_view tag, std::string_view message) noexcept
     return false;
   }
 
-  const auto ascii_color = to_ascii_color(level);
+  const char *ascii_color = to_ascii_color(level);
 
   auto text = utils::FixedText<1024>();
   text.append(to_priority_prefix(level));

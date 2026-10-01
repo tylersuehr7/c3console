@@ -1,13 +1,12 @@
 #include "boot_message.hpp"
 
 #include <cstdio>
-#include <string>
 #include <string_view>
 
 namespace c3::logging {
 
 namespace {
-static constexpr std::string_view kBannerArt = R"(
+constexpr std::string_view kBannerArt = R"(
           ##  ##  ######################
       ##    ##  ######  ################
 ##  ####  ####    ######################  ##  ## ###### ##  ## #####

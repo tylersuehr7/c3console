@@ -19,7 +19,7 @@ class FixedText {
     return previous_size;
   }
 
-  size_t size() const noexcept { return size_; }
+  [[nodiscard]] size_t size() const noexcept { return size_; }
 
   void append(std::string_view text) noexcept {
     const auto count = std::min(text.size(), Capacity - size_);
