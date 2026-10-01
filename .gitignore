@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+.DS_STORE
+# IDEs
+.idea/
+.vscode/
+.cursor/
+.zed/
+# build trees
+build/
+build-*/
+cmake-build-*/
+cmake/
+# tooling
+.cache/
+compile_commands.json
