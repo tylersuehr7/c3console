@@ -15,7 +15,8 @@ include(Catch)
 # CRC-16/CCITT, protocol parsing, calibration interpolation, fault hysteresis,
 # layout arithmetic, touch transform.
 add_executable(c3console_tests
-    test_main.cpp)
+    test_main.cpp
+    test_fixed_text.cpp)
 
 # c3_app and c3_render carry hvac and telemetry publicly; listing them again duplicates the
 # archives on the link line.
