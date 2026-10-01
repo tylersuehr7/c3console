@@ -28,10 +28,16 @@ target_compile_options(c3_warnings INTERFACE
 add_subdirectory(third_party)
 
 # ---------------------------------------------------------------------------
+# First party libraries
+# ---------------------------------------------------------------------------
+
+add_subdirectory(src/logging)  # logging: its own platform code so can live without depending on app.
+
+# ---------------------------------------------------------------------------
 # Executable
 # ---------------------------------------------------------------------------
 add_executable(c3console src/main.cpp)
-target_link_libraries(c3console PRIVATE c3_warnings)
+target_link_libraries(c3console PRIVATE c3_warnings c3_log)
 target_link_libraries(c3console PUBLIC nanovg)
 
 # ---------------------------------------------------------------------------

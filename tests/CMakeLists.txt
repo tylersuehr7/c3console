@@ -16,11 +16,12 @@ include(Catch)
 # layout arithmetic, touch transform.
 add_executable(c3console_tests
     test_main.cpp
-    test_fixed_text.cpp)
+    test_fixed_text.cpp
+    test_log.cpp)
 
 # c3_app and c3_render carry hvac and telemetry publicly; listing them again duplicates the
 # archives on the link line.
-target_link_libraries(c3console_tests PRIVATE c3_warnings Catch2::Catch2WithMain)
+target_link_libraries(c3console_tests PRIVATE c3_log c3_warnings Catch2::Catch2WithMain)
 
 # Tests that read shipped files (config/calibration.json) locate them from the source tree,
 # because ctest does not run them from the repository root.
