@@ -1,0 +1,3776 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>C3 Console — V6 (800 × 1280 panel, design @2x)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Barlow:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        /* ==================================================================
+           DESIGN TOKENS  →  render/Theme.h
+
+           Panel geometry: the target LCD is 1280 × 800 mounted portrait = 800 × 1280 px.
+           The mockup draws at 2× (1600 × 2560 design px) so type and touch sizes stay legible here;
+           the console renders the same layout at 800 × 1280 with every measure halved.
+           Every px value in this file is a physical panel pixel.
+
+           Colour semantics (do not blur these):
+             ink / ink-2 / ink-3   text hierarchy, warm white → grey
+             ember                 INTERACTIVE + SELECTED state only
+             amber                 CAUTION  (fuel low, charging out of range)
+             alarm                 CRITICAL (oil low, coolant high, sender open)
+             gauges in normal state are monochrome white — colour means something
+           ================================================================== */
+        :root {
+            --bg: #000000;
+            --surface: rgba(255, 255, 255, .035);
+            --surface-2: rgba(255, 255, 255, .06);
+            --line: rgba(255, 255, 255, .07);
+            --line-2: rgba(255, 255, 255, .13);
+            --ink: #F5F3EE;
+            --ink-2: #9A9EA6;
+            --ink-3: #5B6068;
+            --ember: #FF6A2B;
+            --ember-ink: #1A0C05;
+            --amber: #FFC24A;
+            --amber-ink: #1B1300;
+            --alarm: #FF3B30;
+            --ok: #34C759;
+            --cp-blue: #2F8CFF;
+            --ui: "Inter", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+            --num: "Barlow", "Inter", system-ui, sans-serif;
+            --r-tile: 32px;
+            --r-ctl: 24px;
+            --sheet: #0C0D10;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        body {
+            background: #000;
+            color: var(--ink);
+            font-family: var(--ui);
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            font-variant-numeric: tabular-nums;
+        }
+
+        button {
+            font-family: inherit;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ---------- panel scaling ---------- */
+        #stage {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden
+        }
+
+        #panel {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 1600px;
+            height: 2560px;
+            transform-origin: top center;
+            background: var(--bg);
+            box-shadow: 0 0 0 1px #17181B, 0 0 90px rgba(0, 0, 0, .9);
+            overflow: hidden;
+        }
+
+        #panel.night {
+            filter: brightness(.5)
+        }
+
+        /* Light theme: same tokens, re-valued. Canvas palette lives in THEMES.light. */
+        #panel.light {
+            --bg: #F3F1EC;
+            --surface: #FFFFFF;
+            --surface-2: rgba(0, 0, 0, .05);
+            --line: rgba(0, 0, 0, .08);
+            --line-2: rgba(0, 0, 0, .14);
+            --ink: #15171B;
+            --ink-2: #5A5F68;
+            --ink-3: #8B9099;
+            --amber: #E39A00;
+            --amber-ink: #1B1300;
+            --alarm: #E5322B;
+            --banner-neutral: rgba(255, 255, 255, .96);
+            --banner-neutral-ink: #15171B;
+            --sheet: #FFFFFF;
+        }
+
+        #panel.light .tile {
+            box-shadow: 0 2px 10px rgba(20, 23, 27, .06)
+        }
+
+        #panel.light .tile.warn {
+            box-shadow: inset 0 0 0 1px rgba(229, 50, 43, .35), inset 0 0 120px rgba(229, 50, 43, .07)
+        }
+
+        #panel.light .seg button:hover,
+        #panel.light .toggle:hover {
+            background: var(--surface-2)
+        }
+
+        .themebtn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            color: var(--ink-2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+
+        .themebtn:hover {
+            background: var(--surface-2);
+            color: var(--ink)
+        }
+
+        .themebtn:focus-visible {
+            outline: 3px solid var(--ember);
+            outline-offset: 3px
+        }
+
+        .themebtn svg {
+            width: 32px;
+            height: 32px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round
+        }
+
+        .themebtn .moon {
+            display: none
+        }
+
+        #panel.light .themebtn .sun {
+            display: none
+        }
+
+        #panel.light .themebtn .moon {
+            display: block
+        }
+
+        #panel>.region {
+            position: absolute
+        }
+
+        /* ---------- status bar ---------- */
+        #status {
+            display: flex;
+            align-items: center;
+            gap: 36px;
+        }
+
+        #status .clock {
+            font-family: var(--num);
+            font-weight: 500;
+            font-size: 48px;
+            color: var(--ink);
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            letter-spacing: .01em;
+        }
+
+        #status .clock .ampm {
+            font-family: var(--ui);
+            font-size: 22px;
+            font-weight: 500;
+            color: var(--ink-3);
+            letter-spacing: .08em;
+        }
+
+        .st {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 500;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--ink-3);
+        }
+
+        .st b {
+            font-weight: 500;
+            color: var(--ink-2)
+        }
+
+        .st .num {
+            font-family: var(--num);
+            font-size: 30px;
+            font-weight: 500;
+            color: var(--ink);
+            letter-spacing: 0;
+        }
+
+        .dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--ok);
+            box-shadow: 0 0 14px rgba(52, 199, 89, .7);
+        }
+
+        .dot.off {
+            background: var(--ink-3);
+            box-shadow: none
+        }
+
+        .dot.bad {
+            background: var(--alarm);
+            box-shadow: 0 0 14px rgba(255, 59, 48, .8);
+            animation: blink 1s steps(2) infinite
+        }
+
+        .spacer {
+            flex: 1
+        }
+
+        .chip {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            padding: 0 22px;
+            height: 48px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            border-radius: 999px;
+        }
+
+        .chip.alarm {
+            background: var(--alarm);
+            color: #fff
+        }
+
+        .chip.amber {
+            background: var(--amber);
+            color: var(--amber-ink)
+        }
+
+        .chip.neutral {
+            background: var(--surface-2);
+            color: var(--ink-2);
+            border: 1px solid var(--line-2)
+        }
+
+        .chip[hidden] {
+            display: none
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: .3
+            }
+        }
+
+        @media (prefers-reduced-motion:reduce) {
+
+            .dot.bad,
+            .banner.alarm {
+                animation: none
+            }
+        }
+
+        /* ---------- instrument tiles ---------- */
+        .tile {
+            position: absolute;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--r-tile);
+            overflow: hidden;
+            transition: border-color .2s, box-shadow .2s, opacity .3s;
+        }
+
+        .tile canvas {
+            display: block;
+            position: absolute;
+            inset: -1px
+        }
+
+        .tile.warn {
+            border-color: rgba(255, 59, 48, .6);
+            box-shadow: inset 0 0 0 1px rgba(255, 59, 48, .35), inset 0 0 120px rgba(255, 59, 48, .10);
+        }
+
+        .tile.caution {
+            border-color: rgba(255, 194, 74, .5);
+            box-shadow: inset 0 0 0 1px rgba(255, 194, 74, .25);
+        }
+
+        .tile.stale {
+            opacity: .55;
+            border-style: dashed;
+            border-color: var(--line-2);
+        }
+
+        /* ---------- CarPlay well ---------- */
+        #wellwrap {
+            position: absolute
+        }
+
+        #well {
+            position: absolute;
+            inset: 0;
+            border-radius: 28px;
+            overflow: hidden;
+            background: #060810;
+            box-shadow: 0 0 0 1px var(--line-2);
+            cursor: crosshair;
+        }
+
+        #fakecp {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            background: #0A0D12;
+        }
+
+        #cprail {
+            flex: 0 0 132px;
+            background: rgba(0, 0, 0, .55);
+            border-right: 1px solid rgba(255, 255, 255, .06);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 0;
+            gap: 26px;
+        }
+
+        #cprail .cptime {
+            font-family: var(--num);
+            font-weight: 500;
+            font-size: 30px;
+            color: #fff;
+            margin-bottom: 8px
+        }
+
+        #cprail .sig {
+            display: flex;
+            gap: 4px;
+            align-items: flex-end;
+            height: 22px;
+            margin-bottom: 18px
+        }
+
+        #cprail .sig i {
+            width: 6px;
+            background: #fff;
+            border-radius: 2px;
+            display: block
+        }
+
+        .cpapp {
+            width: 86px;
+            height: 86px;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, .5);
+        }
+
+        .cpapp svg {
+            width: 50px;
+            height: 50px;
+            fill: none;
+            stroke: #fff;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round
+        }
+
+        .cpapp.maps {
+            background: linear-gradient(160deg, #56C979, #2E9A56)
+        }
+
+        .cpapp.music {
+            background: linear-gradient(160deg, #FF5F7A, #E3243B)
+        }
+
+        .cpapp.phone {
+            background: linear-gradient(160deg, #4CD964, #2AA84A)
+        }
+
+        .cphome {
+            margin-top: auto;
+            display: grid;
+            grid-template-columns: repeat(2, 14px);
+            gap: 8px
+        }
+
+        .cphome i {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, .55);
+            display: block
+        }
+
+        #cpmap {
+            flex: 1;
+            position: relative;
+            overflow: hidden
+        }
+
+        #cpmap > svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%
+        }
+
+        #cpturn {
+            position: absolute;
+            left: 24px;
+            top: 24px;
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            padding: 22px 30px 22px 24px;
+            border-radius: 26px;
+            background: #2FA35A;
+            color: #fff;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+        }
+
+        #cpturn svg {
+            flex: 0 0 64px;
+            width: 64px;
+            height: 64px;
+            fill: none;
+            stroke: #fff;
+            stroke-width: 3.2;
+            stroke-linecap: round;
+            stroke-linejoin: round
+        }
+
+        #cpturn .d {
+            font-family: var(--num);
+            font-weight: 600;
+            font-size: 44px;
+            line-height: 1
+        }
+
+        #cpturn .s {
+            font-size: 26px;
+            font-weight: 500;
+            opacity: .9;
+            margin-top: 6px
+        }
+
+        #cpnow {
+            position: absolute;
+            left: 24px;
+            right: 24px;
+            bottom: 24px;
+            height: 168px;
+            border-radius: 28px;
+            background: rgba(14, 18, 24, .80);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, .08);
+            display: flex;
+            align-items: center;
+            gap: 26px;
+            padding: 0 24px;
+        }
+
+        #cpnow .art {
+            width: 120px;
+            height: 120px;
+            border-radius: 20px;
+            background: linear-gradient(145deg, #5A3A2A 0%, #1B120C 60%, #0B0806 100%);
+            flex: 0 0 auto;
+            position: relative;
+            overflow: hidden
+        }
+
+        #cpnow .art::after {
+            content: "";
+            position: absolute;
+            inset: 26px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, .12)
+        }
+
+        #cpnow .meta {
+            flex: 1;
+            min-width: 0
+        }
+
+        #cpnow .t {
+            font-size: 34px;
+            font-weight: 600;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        #cpnow .a {
+            font-size: 26px;
+            font-weight: 400;
+            color: #8E97A3;
+            margin-top: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        #cpnow .tx {
+            display: flex;
+            gap: 34px;
+            align-items: center;
+            padding-right: 10px
+        }
+
+        #cpnow .tx svg {
+            width: 52px;
+            height: 52px;
+            fill: #fff
+        }
+
+        #cpwait {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 26px;
+            background: #05060A;
+        }
+
+        #cpwait.show {
+            display: flex
+        }
+
+        #cpwait .ring {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            border: 5px solid rgba(255, 255, 255, .08);
+            border-top-color: var(--ink-2);
+            animation: spin 1.1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        #cpwait .m {
+            font-size: 40px;
+            font-weight: 500;
+            color: var(--ink-2)
+        }
+
+        #cpwait .s {
+            font-size: 26px;
+            color: var(--ink-3);
+            letter-spacing: .06em;
+            text-transform: uppercase
+        }
+
+        #geom {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            font-size: 20px;
+            font-weight: 500;
+            letter-spacing: .06em;
+            color: rgba(255, 255, 255, .35);
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, .6);
+            border-radius: 0 14px 0 0;
+            pointer-events: none;
+        }
+
+        .ripple {
+            position: absolute;
+            width: 72px;
+            height: 72px;
+            margin: -36px 0 0 -36px;
+            border: 3px solid #fff;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: rip .45s ease-out forwards;
+        }
+
+        @keyframes rip {
+            from {
+                transform: scale(.3);
+                opacity: .9
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 0
+            }
+        }
+
+        /* ---------- alert banners (overlay the top of the well) ---------- */
+        #alerts {
+            position: absolute;
+            left: 24px;
+            right: 24px;
+            top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .banner {
+            height: 104px;
+            border-radius: 26px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding: 0 30px;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, .5);
+        }
+
+        .banner svg {
+            width: 48px;
+            height: 48px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.6;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex: 0 0 auto
+        }
+
+        .banner .t {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: .04em
+        }
+
+        .banner .d {
+            margin-left: auto;
+            font-family: var(--num);
+            font-size: 34px;
+            font-weight: 500;
+            opacity: .9
+        }
+
+        .banner .d small {
+            font-family: var(--ui);
+            font-size: 24px;
+            font-weight: 500;
+            letter-spacing: .06em;
+            opacity: .8;
+            margin-left: 10px
+        }
+
+        .banner.alarm {
+            background: rgba(255, 59, 48, .94);
+            color: #fff;
+            animation: throb 1.6s ease-in-out infinite
+        }
+
+        .banner.amber {
+            background: rgba(255, 194, 74, .96);
+            color: var(--amber-ink)
+        }
+
+        .banner.neutral {
+            background: var(--banner-neutral, rgba(34, 37, 43, .96));
+            color: var(--banner-neutral-ink, var(--ink));
+            border: 1px solid var(--line-2)
+        }
+
+        @keyframes throb {
+            50% {
+                box-shadow: 0 14px 40px rgba(0, 0, 0, .5), 0 0 0 10px rgba(255, 59, 48, .18)
+            }
+        }
+
+        /* ---------- control dock ---------- */
+        #dock {
+            display: grid;
+            grid-template-columns: 1000px 552px;
+            grid-template-rows: 164px 164px;
+            column-gap: 16px;
+            row-gap: 24px;
+            padding: 24px 0;
+        }
+
+        .ctl {
+            display: flex;
+            flex-direction: column;
+            gap: 8px
+        }
+
+        .ctl-label {
+            font-size: 24px;
+            line-height: 28px;
+            font-weight: 500;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--ink-3);
+            padding-left: 8px;
+            display: flex;
+            gap: 16px;
+            white-space: nowrap;
+            overflow: hidden
+        }
+
+        .ctl-label .hint {
+            color: var(--ink-3);
+            opacity: .7;
+            letter-spacing: .06em;
+            text-transform: none
+        }
+
+        .seg {
+            display: flex;
+            gap: 6px;
+            padding: 6px;
+            height: 128px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--r-ctl);
+        }
+
+        .seg button {
+            flex: 1;
+            border: 0;
+            border-radius: 18px;
+            background: transparent;
+            color: var(--ink-2);
+            font-size: 34px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            cursor: pointer;
+            transition: background .15s, color .15s, transform .08s;
+        }
+
+        .seg button svg {
+            width: 40px;
+            height: 40px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round
+        }
+
+        .seg button:hover {
+            background: var(--surface-2);
+            color: var(--ink)
+        }
+
+        .seg button:active {
+            transform: scale(.98)
+        }
+
+        .seg button.on {
+            background: var(--ember);
+            color: var(--ember-ink);
+            font-weight: 600
+        }
+
+        .seg button.on:hover {
+            background: var(--ember);
+            color: var(--ember-ink)
+        }
+
+        .seg button:focus-visible,
+        .toggle:focus-visible {
+            outline: 3px solid var(--ember);
+            outline-offset: 3px
+        }
+
+        .toggles {
+            display: flex;
+            gap: 16px;
+            height: 128px
+        }
+
+        .toggle {
+            flex: 1;
+            height: 128px;
+            border-radius: var(--r-ctl);
+            background: var(--surface);
+            border: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            padding: 0 30px;
+            color: var(--ink-2);
+            cursor: pointer;
+            text-align: left;
+            transition: background .15s, color .15s, border-color .15s, transform .08s;
+        }
+
+        .toggle svg {
+            width: 44px;
+            height: 44px;
+            flex: 0 0 auto;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round
+        }
+
+        .toggle .t {
+            font-size: 34px;
+            font-weight: 500;
+            line-height: 1
+        }
+
+        .toggle .s {
+            font-size: 22px;
+            font-weight: 500;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--ink-3);
+            margin-top: 8px
+        }
+
+        .toggle:hover {
+            background: var(--surface-2);
+            color: var(--ink)
+        }
+
+        .toggle:active {
+            transform: scale(.985)
+        }
+
+        .toggle.on {
+            background: var(--ember);
+            border-color: var(--ember);
+            color: var(--ember-ink)
+        }
+
+        .toggle.on .t {
+            font-weight: 600
+        }
+
+        .toggle.on .s {
+            color: rgba(26, 12, 5, .7)
+        }
+
+        /* ---------- mechanical lever hint ---------- */
+        #lever {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            font-size: 22px;
+            font-weight: 500;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--ink-3);
+        }
+
+        #lever svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.4;
+            stroke-linecap: round;
+            stroke-linejoin: round
+        }
+
+
+        /* ---------- status-bar tool buttons ---------- */
+        .sbtools {
+            display: flex;
+            gap: 12px;
+            margin-left: 8px
+        }
+
+        .iconbtn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            color: var(--ink-2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+
+        .iconbtn:hover {
+            background: var(--surface-2);
+            color: var(--ink)
+        }
+
+        .iconbtn:focus-visible {
+            outline: 3px solid var(--ember);
+            outline-offset: 3px
+        }
+
+        .iconbtn svg {
+            width: 32px;
+            height: 32px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round
+        }
+
+        .iconbtn.on {
+            background: var(--ember);
+            border-color: var(--ember);
+            color: var(--ember-ink)
+        }
+
+        .iconbtn.muted {
+            color: var(--alarm)
+        }
+
+        .iconbtn .alt {
+            display: none
+        }
+
+        .iconbtn.muted .pri {
+            display: none
+        }
+
+        .iconbtn.muted .alt {
+            display: block
+        }
+
+        /* ---------- volume pill (transient, driven by the encoder) ---------- */
+        #volpill {
+            position: absolute;
+            left: 50%;
+            bottom: 216px;
+            transform: translate(-50%, 16px);
+            width: 680px;
+            height: 96px;
+            border-radius: 26px;
+            background: var(--banner-neutral, rgba(34, 37, 43, .96));
+            color: var(--banner-neutral-ink, var(--ink));
+            border: 1px solid var(--line-2);
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            padding: 0 30px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .18s, transform .18s;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, .5);
+        }
+
+        #volpill.show {
+            opacity: 1;
+            transform: translate(-50%, 0)
+        }
+
+        #volpill svg {
+            width: 44px;
+            height: 44px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            flex: 0 0 auto
+        }
+
+        #volpill .bar {
+            flex: 1;
+            height: 12px;
+            border-radius: 6px;
+            background: var(--line-2);
+            overflow: hidden
+        }
+
+        #volpill .bar i {
+            display: block;
+            height: 100%;
+            background: var(--ember);
+            border-radius: 6px
+        }
+
+        #volpill.muted .bar i {
+            background: var(--alarm)
+        }
+
+        #volpill .n {
+            font-family: var(--num);
+            font-size: 40px;
+            font-weight: 500;
+            width: 110px;
+            text-align: right
+        }
+
+        /* ---------- audio sheet ---------- */
+        #scrim {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, .45);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s;
+        }
+
+        #scrim.show {
+            opacity: 1;
+            pointer-events: auto
+        }
+
+        .sheet {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 920px;
+            border-radius: 28px;
+            background: var(--sheet);
+            border: 1px solid var(--line-2);
+            transform: translateY(104%);
+            transition: transform .26s cubic-bezier(.2, .8, .2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            padding: 32px 40px 40px;
+            cursor: default;
+        }
+
+        .sheet.show {
+            transform: translateY(0)
+        }
+
+        #sheetSet {
+            height: 1120px
+        }
+
+        .sh-head {
+            display: flex;
+            align-items: center;
+            gap: 24px
+        }
+
+        .sh-title {
+            font-size: 40px;
+            font-weight: 600;
+            color: var(--ink)
+        }
+
+        .sh-sub {
+            font-size: 22px;
+            font-weight: 500;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--ink-3);
+            margin-top: 8px
+        }
+
+        .sh-head .iconbtn {
+            margin-left: auto;
+            width: 72px;
+            height: 72px
+        }
+
+        .sh-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            flex: 1;
+        }
+
+        .sh-col {
+            display: flex;
+            flex-direction: column;
+            gap: 24px
+        }
+
+        .sh-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--r-tile);
+            padding: 28px 32px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .sh-card.grow {
+            flex: 1
+        }
+
+        .sl {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: relative
+        }
+
+        .sl .lbl {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 24px;
+            font-weight: 500;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--ink-3)
+        }
+
+        .sl .lbl b {
+            font-family: var(--num);
+            font-size: 36px;
+            font-weight: 500;
+            color: var(--ink);
+            letter-spacing: 0;
+            text-transform: none
+        }
+
+        .sl .lbl b small {
+            font-family: var(--ui);
+            font-size: 22px;
+            color: var(--ink-3);
+            margin-left: 6px
+        }
+
+        .sl input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 72px;
+            background: transparent;
+            margin: 0;
+            cursor: pointer;
+            --p: 0%;
+        }
+
+        .sl input[type=range]::-webkit-slider-runnable-track {
+            height: 12px;
+            border-radius: 6px;
+            background: linear-gradient(90deg, var(--fill, var(--line-2)) var(--p), var(--line-2) 0);
+        }
+
+        .sl input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: var(--ink);
+            border: 5px solid var(--sheet);
+            margin-top: -20px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+        }
+
+        .sl.big input[type=range]::-webkit-slider-runnable-track {
+            height: 20px;
+            border-radius: 10px
+        }
+
+        .sl.big input[type=range]::-webkit-slider-thumb {
+            width: 60px;
+            height: 60px;
+            margin-top: -20px
+        }
+
+        .sl.big input[type=range] {
+            --fill: var(--ember)
+        }
+
+        .sl.center::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: 24px;
+            width: 2px;
+            height: 24px;
+            background: var(--ink-3);
+            transform: translateX(-50%);
+            pointer-events: none
+        }
+
+        .sl .ends {
+            display: flex;
+            justify-content: space-between;
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--ink-3);
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            margin-top: -10px
+        }
+
+        .sh-row {
+            display: flex;
+            gap: 16px;
+            align-items: center
+        }
+
+        .sh-row .toggle {
+            flex: 0 0 300px
+        }
+
+        .sh-row .sl {
+            flex: 1
+        }
+
+        .sh-note {
+            font-size: 22px;
+            color: var(--ink-3);
+            line-height: 1.4
+        }
+
+        /* ---------- rear camera surface ---------- */
+        #camview {
+            position: absolute;
+            inset: 0;
+            display: none;
+            background: #000;
+        }
+
+        #camview.show {
+            display: block
+        }
+
+        #camview svg.scene,
+        #camview svg.guides {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%
+        }
+
+        #camview.noguides svg.guides {
+            display: none
+        }
+
+        #camview .vignette {
+            position: absolute;
+            inset: 0;
+            box-shadow: inset 0 0 220px rgba(0, 0, 0, .75);
+            pointer-events: none
+        }
+
+        #cambadge {
+            position: absolute;
+            z-index: 2;
+            left: 24px;
+            top: 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center
+        }
+
+        #cambadge .b {
+            height: 64px;
+            padding: 0 24px;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, .55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: #fff;
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid rgba(255, 255, 255, .12);
+        }
+
+        #cambadge .b svg {
+            width: 30px;
+            height: 30px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round
+        }
+
+        #cambadge .b.rev {
+            background: var(--alarm);
+            border-color: transparent
+        }
+
+        #camtools {
+            position: absolute;
+            z-index: 2;
+            right: 24px;
+            top: 24px;
+            display: flex;
+            gap: 12px
+        }
+
+        #camtools .iconbtn {
+            background: rgba(0, 0, 0, .55);
+            border-color: rgba(255, 255, 255, .12);
+            color: #fff;
+            width: 72px;
+            height: 72px
+        }
+
+        #camtools .iconbtn.on {
+            background: #fff;
+            color: #000;
+            border-color: #fff
+        }
+
+        #camtools .iconbtn[hidden] {
+            display: none
+        }
+
+        #camfault {
+            position: absolute;
+            inset: 0;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 22px;
+            background: #05060A;
+            color: #9A9EA6;
+        }
+
+        #camview.fault #camfault {
+            display: flex
+        }
+
+        #camview.fault svg.scene,
+        #camview.fault svg.guides,
+        #camview.fault .vignette {
+            display: none
+        }
+
+        #camfault svg {
+            width: 96px;
+            height: 96px;
+            fill: none;
+            stroke: var(--alarm);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round
+        }
+
+        #camfault .m {
+            font-size: 40px;
+            font-weight: 500;
+            color: #F5F3EE
+        }
+
+        #camfault .s {
+            font-size: 26px;
+            color: #5B6068;
+            letter-spacing: .06em;
+            text-transform: uppercase
+        }
+
+
+        /* ---------- settings sheet ---------- */
+        .swatches {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            padding: 6px 4px
+        }
+
+        .sw {
+            width: 84px;
+            height: 84px;
+            border-radius: 50%;
+            border: 0;
+            cursor: pointer;
+            box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .18);
+            transition: transform .12s
+        }
+
+        .sw:hover {
+            transform: scale(1.06)
+        }
+
+        .sw.on {
+            outline: 4px solid var(--ink);
+            outline-offset: 5px
+        }
+
+        .sw:focus-visible {
+            outline: 4px solid var(--ink);
+            outline-offset: 5px
+        }
+
+        .sl.hue input[type=range]::-webkit-slider-runnable-track {
+            background: linear-gradient(90deg, hsl(0 92% 58%), hsl(60 92% 58%), hsl(120 92% 58%), hsl(180 92% 58%), hsl(240 92% 58%), hsl(300 92% 58%), hsl(360 92% 58%));
+            height: 16px;
+            border-radius: 8px
+        }
+
+        .sl.hue input[type=range]::-webkit-slider-thumb {
+            background: var(--ember);
+            margin-top: -18px
+        }
+
+        .preview {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            pointer-events: none
+        }
+
+        .preview .seg {
+            flex: 1;
+            height: 96px
+        }
+
+        .preview .seg button {
+            font-size: 28px
+        }
+
+        .preview .toggle {
+            flex: 0 0 240px;
+            height: 96px;
+            padding: 0 24px;
+            gap: 16px
+        }
+
+        .preview .toggle svg {
+            width: 36px;
+            height: 36px
+        }
+
+        .preview .bar {
+            flex: 1;
+            height: 12px;
+            border-radius: 6px;
+            background: var(--line-2);
+            overflow: hidden
+        }
+
+        .preview .bar i {
+            display: block;
+            width: 62%;
+            height: 100%;
+            background: var(--ember);
+            border-radius: 6px
+        }
+
+        .kv {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 24px;
+            font-weight: 500;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--ink-3);
+            padding: 16px 0;
+            border-bottom: 1px solid var(--line)
+        }
+
+        .kv b {
+            font-family: var(--num);
+            font-weight: 500;
+            font-size: 30px;
+            color: var(--ink);
+            letter-spacing: 0;
+            text-transform: none
+        }
+
+        .sh-card .toggles {
+            margin-top: auto
+        }
+
+
+        /* ---------- v5: brand, tabs, islands, full-well surfaces ---------- */
+        .brand {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            color: var(--ink-3);
+            font-size: 21px;
+            font-weight: 500;
+            letter-spacing: .2em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .brand img {
+            height: 46px;
+            width: auto;
+            opacity: .95
+        }
+
+        #tabs {
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .tabbar {
+            display: flex;
+            gap: 6px;
+            padding: 6px;
+            height: 64px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+        }
+
+        .tab {
+            position: relative;
+            height: 52px;
+            padding: 0 30px 0 26px;
+            border: 0;
+            border-radius: 999px;
+            background: transparent;
+            color: var(--ink-2);
+            font-family: var(--ui);
+            font-size: 24px;
+            font-weight: 500;
+            letter-spacing: .03em;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+
+        .tab svg {
+            width: 26px;
+            height: 26px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.1;
+            stroke-linecap: round;
+            stroke-linejoin: round
+        }
+
+        .tab:hover {
+            background: var(--surface-2);
+            color: var(--ink)
+        }
+
+        .tab.on {
+            background: var(--ember);
+            color: var(--ember-ink);
+            font-weight: 600
+        }
+
+        .tab .alt {
+            display: none
+        }
+
+        .tab.muted .pri {
+            display: none
+        }
+
+        .tab.muted .alt {
+            display: block
+        }
+
+        .tab.muted:not(.on) {
+            color: var(--alarm)
+        }
+
+        .tab .revdot {
+            display: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--alarm);
+            box-shadow: 0 0 12px var(--alarm);
+        }
+
+        .tab.rev .revdot {
+            display: block
+        }
+
+        .island {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--r-tile);
+            padding: 24px 24px 20px;
+        }
+
+        .island .ctl-label {
+            padding-left: 8px
+        }
+
+        #tVolt.island {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .syschips {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 0 4px;
+        }
+
+        .syschip {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            height: 64px;
+            padding: 0 18px;
+            border-radius: 999px;
+            border: 1px solid var(--line-2);
+            color: var(--ink-2);
+            font-size: 20px;
+            font-weight: 500;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .syschip .dot {
+            margin: 0
+        }
+
+        #dock {
+            grid-template-columns: 496px 1008px;   /* = fuel/systems column | oil + gap + coolant (v6 swap) */
+            grid-template-rows: 392px;
+            padding: 0;
+        }
+
+        #dock .island {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #islLights {
+            order: -1   /* under the fuel/systems column */
+        }
+
+        #dock .ctl-label {
+            margin-bottom: 0
+        }
+
+        #dock .ctl-hint {
+            font-size: 19px;
+            letter-spacing: .06em;
+            color: var(--ink-3);
+            opacity: .8;
+            text-align: center;
+            padding: 4px 0 0;
+        }
+
+        #dock .toggles.col {
+            flex-direction: column;
+            height: auto;
+            flex: 1;
+            gap: 10px;
+        }
+
+        #dock .toggles.col .toggle {
+            height: auto;
+            flex: 1;
+        }
+
+
+        #dock .seg,
+        #dock .toggles,
+        #dock .toggle {
+            height: 96px
+        }
+
+        #dock .toggles {
+            gap: 12px
+        }
+
+        #dock .toggle {
+            padding: 0 16px;
+            gap: 12px;
+            min-width: 0
+        }
+
+        #dock .toggle .t {
+            font-size: 26px
+        }
+
+        #dock .toggle .s {
+            font-size: 19px;
+            margin-top: 6px
+        }
+
+        #dock .toggle svg {
+            width: 34px;
+            height: 34px
+        }
+
+
+        /* surfaces fill the well; the tabs choose which one shows */
+        .sheet,
+        #sheetSet {
+            inset: 0;
+            height: auto;
+            transform: none;
+            transition: none;
+            display: none;
+            border: 0;
+        }
+
+        .sheet.show,
+        #sheetSet.show {
+            display: flex
+        }
+
+        #dock .ctl-label .hint {
+            font-size: 19px;
+            letter-spacing: .06em;
+            align-self: center
+        }
+
+        #scrim,
+        #scrim.show {
+            display: none
+        }
+
+        #cpwait .brandmark {
+            width: 132px;
+            height: 132px;
+            border-radius: 50%;
+            opacity: .9;
+            margin-bottom: 8px
+        }
+
+        #status {
+            gap: 32px
+        }
+
+        /* ---------- v6: nested settings ---------- */
+        [hidden] {
+            display: none !important
+        }
+
+        .sh-head #btnBack {
+            margin-left: 0
+        }
+
+        .sh-page {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            gap: 24px;
+            min-height: 0;
+        }
+
+        .sh-page.show {
+            display: flex
+        }
+
+        .navlist {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .navrow {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+            height: 176px;
+            padding: 0 32px 0 36px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--r-tile);
+            color: var(--ink);
+            font-family: var(--ui);
+            text-align: left;
+            cursor: pointer;
+            transition: background .15s;
+        }
+
+        .navrow:hover {
+            background: var(--surface-2)
+        }
+
+        .navrow:focus-visible {
+            outline: 3px solid var(--ember);
+            outline-offset: 3px
+        }
+
+        .navrow .ic {
+            flex: none;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--ink-2);
+        }
+
+        .navrow .ic svg {
+            width: 36px;
+            height: 36px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round
+        }
+
+        .navrow .t {
+            font-size: 34px;
+            font-weight: 600
+        }
+
+        .navrow .s {
+            font-size: 22px;
+            font-weight: 500;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--ink-3);
+            margin-top: 8px
+        }
+
+        .navrow .chev {
+            margin-left: auto;
+            width: 32px;
+            height: 32px;
+            fill: none;
+            stroke: var(--ink-3);
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round
+        }
+
+        .calbanner {
+            padding: 22px 32px;
+            border-radius: var(--r-ctl);
+            background: color-mix(in srgb, var(--amber) 14%, transparent);
+            border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
+            color: var(--ink-2);
+            font-size: 22px;
+            line-height: 1.4;
+        }
+
+        .calbanner b {
+            color: var(--amber);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            font-weight: 600
+        }
+
+        .calgrid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 24px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .calcard .ctl-label {
+            display: flex;
+            justify-content: space-between
+        }
+
+        .calvals {
+            display: flex;
+            gap: 40px;
+            flex: 1;
+            align-items: center;
+            padding: 0 8px;
+        }
+
+        .calvals>div {
+            flex: 1
+        }
+
+        .calvals .k {
+            font-size: 21px;
+            font-weight: 500;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--ink-3)
+        }
+
+        .calvals .big {
+            font-family: var(--num);
+            font-weight: 300;
+            font-size: 76px;
+            line-height: 1.05;
+            color: var(--ink);
+            font-variant-numeric: tabular-nums;
+            margin-top: 6px;
+        }
+
+        .calvals .u {
+            font-size: 22px;
+            color: var(--ink-2);
+            font-weight: 500
+        }
+
+        .calcard .toggles {
+            height: 104px
+        }
+
+        .calcard .toggle {
+            flex: 1;
+            min-width: 0;
+            padding: 0 20px
+        }
+
+        .toggle[disabled] {
+            opacity: .45;
+            cursor: default
+        }
+
+        .poweredby {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            color: var(--ink-3);
+            font-size: 20px;
+            font-weight: 500;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            padding-top: 8px;
+        }
+
+        .poweredby img {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            opacity: .9
+        }
+
+        /* ---------- layout overlay (sim only) ---------- */
+        #layoutov {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            display: none
+        }
+
+        #layoutov.show {
+            display: block
+        }
+
+        #layoutov div {
+            position: absolute;
+            border: 2px dashed rgba(47, 140, 255, .8);
+            color: #fff;
+            font: 500 22px/1 var(--ui);
+            letter-spacing: .04em;
+        }
+
+        #layoutov div span {
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: rgba(47, 140, 255, .9);
+            padding: 6px 10px;
+            border-radius: 0 0 10px 0
+        }
+
+        /* ---------- sim drawer ---------- */
+        #drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            height: 100%;
+            width: 400px;
+            background: #0B0C0E;
+            border-left: 1px solid #1B1D21;
+            transform: translateX(100%);
+            transition: transform .22s ease;
+            display: flex;
+            flex-direction: column;
+            z-index: 20;
+            font-size: 14px;
+        }
+
+        #drawer.open {
+            transform: translateX(0)
+        }
+
+        #drawer h2 {
+            font-weight: 600;
+            font-size: 15px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            padding: 18px 20px;
+            border-bottom: 1px solid #1B1D21;
+            color: var(--ink-2);
+        }
+
+        #drawer .body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px
+        }
+
+        .grp {
+            display: flex;
+            flex-direction: column;
+            gap: 10px
+        }
+
+        .grp>label {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--ink-3)
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px
+        }
+
+        .simchip {
+            font-size: 13px;
+            font-weight: 500;
+            padding: 7px 12px;
+            background: #14161A;
+            border: 1px solid #23262B;
+            border-radius: 999px;
+            color: var(--ink-2);
+            cursor: pointer;
+            user-select: none
+        }
+
+        .simchip:hover {
+            color: var(--ink)
+        }
+
+        .simchip.on {
+            background: var(--ember);
+            border-color: var(--ember);
+            color: var(--ember-ink)
+        }
+
+        .simchip.danger.on {
+            background: var(--alarm);
+            border-color: var(--alarm);
+            color: #fff
+        }
+
+        .slider {
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .slider input[type=range] {
+            flex: 1;
+            accent-color: var(--ember)
+        }
+
+        .slider .n {
+            font-family: var(--num);
+            font-size: 15px;
+            color: var(--ink);
+            width: 66px;
+            text-align: right
+        }
+
+        .slider .n:first-child {
+            text-align: left;
+            width: 40px;
+            color: var(--ink-3);
+            font-family: var(--ui);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .08em
+        }
+
+        #log {
+            flex: 0 0 240px;
+            border-top: 1px solid #1B1D21;
+            overflow-y: auto;
+            padding: 12px 14px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 11px;
+            line-height: 1.55;
+            color: #6B7079;
+        }
+
+        #log b {
+            color: var(--ember);
+            font-weight: 500
+        }
+
+        #log i {
+            color: var(--cp-blue);
+            font-style: normal
+        }
+
+        #toggle {
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            z-index: 21;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: .06em;
+            background: #14161A;
+            border: 1px solid #23262B;
+            border-radius: 999px;
+            color: var(--ink-2);
+            padding: 9px 14px;
+            cursor: pointer;
+        }
+
+        #toggle:hover {
+            color: var(--ink)
+        }
+
+        #hud {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            z-index: 21;
+            font-size: 12px;
+            font-weight: 500;
+            color: #55595F;
+            background: rgba(10, 10, 12, .75);
+            border-radius: 8px;
+            padding: 7px 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <button id="toggle">sim controls</button>
+    <div id="hud">—</div>
+
+    <div id="stage">
+        <div id="panel">
+
+            <!-- ============ status bar ============ -->
+            <div id="status" class="region">
+                <div class="clock"><span id="stClock">12:41</span><span class="ampm" id="stAmpm">PM</span></div>
+                <div class="spacer"></div>
+                <div class="chip alarm" id="chipWarn" hidden>
+                    <span id="chipWarnText">CHECK</span>
+                </div>
+                <div class="st">IGN <b id="stIgn">ON</b></div>
+                <div class="st"><span class="num" id="stVolt">14.2</span> V</div>
+                <div class="brand" title="Suehr Studios"><img src="../assets/s.svg" alt="Suehr Studios"></div>
+                <button class="iconbtn themebtn" id="btnTheme" aria-label="Switch to light theme">
+                    <svg class="sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+                    <svg class="moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+                </button>
+            </div>
+
+            <!-- ============ surface tabs (v5) ============ -->
+            <div id="tabs" class="region">
+                <div class="tabbar" role="tablist">
+                    <button class="tab on" id="tabCarplay" role="tab"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M11 18h2"/></svg>CarPlay</button>
+                    <button class="tab" id="tabCam" role="tab"><svg viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg>Camera<i class="revdot"></i></button>
+                    <button class="tab" id="tabSettings" role="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
+                </div>
+            </div>
+
+            <!-- ============ instrument cluster ============ -->
+            <div class="tile" id="tOil"><canvas id="cOil" width="512" height="544"></canvas></div>
+            <div class="tile" id="tClt"><canvas id="cClt" width="512" height="544"></canvas></div>
+            <div class="tile" id="tFuel"><canvas id="cFuel" width="512" height="264"></canvas></div>
+            <div class="tile island" id="tVolt">
+                <div class="ctl-label">Systems</div>
+                <div class="syschips">
+                    <div class="syschip" id="chipMcu"><i class="dot" id="dotMcu"></i>MCU</div>
+                    <div class="syschip" id="chipCp"><i class="dot" id="dotCp"></i>CarPlay</div>
+                </div>
+            </div>
+
+            <!-- ============ CarPlay well ============ -->
+            <div id="wellwrap" class="region">
+                <div id="well">
+                    <div id="fakecp">
+                        <div id="cprail">
+                            <div class="cptime" id="cpTime">12:41</div>
+                            <div class="sig"><i style="height:8px"></i><i style="height:12px"></i><i
+                                    style="height:16px"></i><i style="height:22px;opacity:.35"></i></div>
+                            <div class="cpapp maps"><svg viewBox="0 0 24 24">
+                                    <path d="M12 21s-6-5.2-6-10a6 6 0 0 1 12 0c0 4.8-6 10-6 10z" />
+                                    <circle cx="12" cy="11" r="2.2" />
+                                </svg></div>
+                            <div class="cpapp music"><svg viewBox="0 0 24 24">
+                                    <path d="M9 18V6l10-2v12" />
+                                    <circle cx="6.5" cy="18" r="2.5" />
+                                    <circle cx="16.5" cy="16" r="2.5" />
+                                </svg></div>
+                            <div class="cpapp phone"><svg viewBox="0 0 24 24">
+                                    <path
+d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />
+                                </svg></div>
+                            <div class="cphome"><i></i><i></i><i></i><i></i></div>
+                        </div>
+                        <div id="cpmap">
+                            <svg viewBox="0 0 1436 1248" preserveAspectRatio="xMidYMid slice">
+                                <defs>
+                                    <radialGradient id="mapbg" cx="35%" cy="20%" r="90%">
+                                        <stop offset="0" stop-color="#141B24" />
+                                        <stop offset="1" stop-color="#090C11" />
+                                    </radialGradient>
+                                </defs>
+                                <rect width="1436" height="1248" fill="url(#mapbg)" />
+                                <g fill="#0F151C">
+                                    <rect x="120" y="120" width="380" height="240" rx="18" />
+                                    <rect x="600" y="60" width="520" height="300" rx="18" />
+                                    <rect x="120" y="460" width="240" height="380" rx="18" />
+                                    <rect x="920" y="460" width="420" height="330" rx="18" />
+                                    <rect x="120" y="940" width="640" height="260" rx="18" />
+                                </g>
+                                <g stroke="#1E2A36" stroke-width="10" fill="none" stroke-linecap="round">
+                                    <path d="M-40 410 H1480" />
+                                    <path d="M-40 890 H1480" />
+                                    <path d="M540 -40 V1290" />
+                                    <path d="M860 -40 V1290" />
+                                </g>
+                                <g stroke="#182129" stroke-width="5" fill="none">
+                                    <path d="M-40 250 H1480" />
+                                    <path d="M-40 640 H1480" />
+                                    <path d="M-40 1080 H1480" />
+                                    <path d="M320 -40 V1290" />
+                                    <path d="M1160 -40 V1290" />
+                                </g>
+                                <path d="M540 1290 V890 H860 V410 H1480" stroke="rgba(47,140,255,.28)" stroke-width="34"
+                                    fill="none" stroke-linejoin="round" stroke-linecap="round" />
+                                <path d="M540 1290 V890 H860 V410 H1480" stroke="#2F8CFF" stroke-width="18" fill="none"
+                                    stroke-linejoin="round" stroke-linecap="round" />
+                                <g transform="translate(540 1010)">
+                                    <path d="M0 -70 L44 20 Q0 0 -44 20 Z" fill="rgba(47,140,255,.35)" />
+                                    <circle r="34" fill="rgba(47,140,255,.25)" />
+                                    <circle r="20" fill="#2F8CFF" stroke="#fff" stroke-width="5" />
+                                </g>
+                            </svg>
+                            <div id="cpturn">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M9 19V9h9" />
+                                    <path d="M13 5l-4 4 4 4" />
+                                </svg>
+                                <div>
+                                    <div class="d">0.4 mi</div>
+                                    <div class="s">Turn left onto Ocean Ave</div>
+                                </div>
+                            </div>
+                            <div id="cpnow">
+                                <div class="art"></div>
+                                <div class="meta">
+                                    <div class="t">Ain't Talkin' 'Bout Love</div>
+                                    <div class="a">Van Halen — Van Halen II</div>
+                                </div>
+                                <div class="tx">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M6 5h2.5v14H6zM19 5v14L9.5 12z" />
+                                    </svg>
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
+                                    </svg>
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M15.5 5H18v14h-2.5zM5 5v14l9.5-7z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="cpwait">
+                        <img class="brandmark" src="../assets/studios.svg" alt="">
+                        <div class="ring"></div>
+                        <div class="m">Connecting to CarPlay</div>
+                        <div class="s">dongle session negotiating</div>
+                    </div>
+                    <div id="camview" class="show-guides">
+                        <svg class="scene" viewBox="0 0 1568 1248" preserveAspectRatio="xMidYMid slice">
+                            <defs>
+                                <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stop-color="#2B2F37" />
+                                    <stop offset="1" stop-color="#1B1E24" />
+                                </linearGradient>
+                                <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stop-color="#3C3D41" />
+                                    <stop offset="1" stop-color="#17181B" />
+                                </linearGradient>
+                                <linearGradient id="chrome" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stop-color="#F2F2F0" />
+                                    <stop offset=".45" stop-color="#8E9096" />
+                                    <stop offset=".55" stop-color="#3A3C41" />
+                                    <stop offset="1" stop-color="#B9BBC0" />
+                                </linearGradient>
+                            </defs>
+                            <rect width="1568" height="560" fill="url(#wall)" />
+                            <g stroke="#232730" stroke-width="3">
+                                <path d="M0 140H1568M0 260H1568M0 380H1568M0 500H1568" />
+                            </g>
+                            <rect x="980" y="120" width="460" height="440" rx="6" fill="#161920" stroke="#2A2E36" stroke-width="4" />
+                            <rect x="1010" y="150" width="400" height="80" fill="#1D2028" />
+                            <rect x="0" y="560" width="1568" height="688" fill="url(#ground)" />
+                            <g stroke="rgba(255,255,255,.05)" stroke-width="3">
+                                <path d="M784 560L-300 1248M784 560L100 1248M784 560L500 1248M784 560L1068 1248M784 560L1468 1248M784 560L1868 1248" />
+                                <path d="M0 700H1568M0 880H1568M0 1090H1568" />
+                            </g>
+                            <path d="M0 560H1568" stroke="#0E1014" stroke-width="6" />
+                            <g transform="translate(1180 640)">
+                                <rect x="0" y="0" width="120" height="300" rx="10" fill="#4A4D55" />
+                                <rect x="0" y="0" width="40" height="300" rx="10" fill="#5C6069" />
+                                <rect x="-10" y="290" width="140" height="26" rx="6" fill="#2C2E33" />
+                                <rect x="0" y="40" width="120" height="40" fill="#E0B23A" opacity=".85" />
+                                <rect x="0" y="160" width="120" height="40" fill="#E0B23A" opacity=".85" />
+                            </g>
+                            <path d="M-40 1248 V1160 Q784 1090 1608 1160 V1248 Z" fill="#111214" />
+                            <path d="M-40 1172 Q784 1102 1608 1172 L1608 1206 Q784 1136 -40 1206 Z" fill="url(#chrome)" />
+                        </svg>
+                        <svg class="guides" viewBox="0 0 1568 1248" preserveAspectRatio="xMidYMid slice">
+                            <g stroke="rgba(0,0,0,.6)" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M330 1120L424 990M1238 1120L1144 990M424 990L518 860M1144 990L1050 860M518 860L620 720M1050 860L948 720" />
+                                <path d="M424 990H1144M518 860H1050M620 720H948" />
+                            </g>
+                            <g stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M330 1120L424 990M1238 1120L1144 990M424 990H1144" stroke="#FF3B30" />
+                                <path d="M424 990L518 860M1144 990L1050 860M518 860H1050" stroke="#FFC24A" />
+                                <path d="M518 860L620 720M1050 860L948 720M620 720H948" stroke="#34C759" />
+                                <path d="M784 1110V730" stroke="rgba(255,255,255,.45)" stroke-dasharray="14 18" stroke-width="4" />
+                            </g>
+                            <g font-family="Barlow, Inter, sans-serif" font-weight="600" font-size="28" fill="#fff" stroke="rgba(0,0,0,.7)" stroke-width="6" paint-order="stroke" text-anchor="start">
+                                <text x="1170" y="1000">0.5 m</text>
+                                <text x="1076" y="870">1.5 m</text>
+                                <text x="974" y="730">3 m</text>
+                            </g>
+                        </svg>
+                        <div class="vignette"></div>
+                        <div id="cambadge">
+                            <span class="b"><svg viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg>Rear camera</span>
+                            <span class="b" id="camState">Preview</span>
+                        </div>
+                        <div id="camtools">
+                            <button class="iconbtn on" id="btnGuides" aria-label="Toggle guidelines">
+                                <svg viewBox="0 0 24 24"><path d="M4 20L9 5h6l5 15M6.5 14h11M8 9.5h8"/></svg>
+                            </button>
+                            <button class="iconbtn" id="btnCamClose" aria-label="Close camera">
+                                <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                            </button>
+                        </div>
+                        <div id="camfault">
+                            <svg viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/><path d="M3 3l18 18"/></svg>
+                            <div class="m">Camera unavailable</div>
+                            <div class="s">no frames from rear camera · use mirrors</div>
+                        </div>
+                    </div>
+                    <div id="geom">carplay surface —</div>
+                    <div id="scrim"></div>
+                    <div id="sheetSet" class="sheet">
+                        <div class="sh-head">
+                            <button class="iconbtn" id="btnBack" aria-label="Back" hidden>
+                                <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+                            </button>
+                            <div>
+                                <div class="sh-title" id="shTitle">Settings</div>
+                                <div class="sh-sub" id="shSub">Stored on the console · writable data partition, not the phone</div>
+                            </div>
+                            <button class="iconbtn" id="btnSetClose" aria-label="Close settings">
+                                <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                            </button>
+                        </div>
+
+                        <!-- root: one list, one tap deep -->
+                        <div class="sh-page show" id="pgRoot">
+                            <div class="navlist">
+                            <button class="navrow" data-page="audio">
+                                <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a8 8 0 0 1 0 11"/></svg></span>
+                                <div><div class="t">Audio</div><div class="s" id="nrAudio">Volume 62 · Flat</div></div>
+                                <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                            <button class="navrow" data-page="theme">
+                                <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg></span>
+                                <div><div class="t">Theme</div><div class="s" id="nrTheme">Dark · Ember</div></div>
+                                <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                            <button class="navrow" data-page="units">
+                                <span class="ic"><svg viewBox="0 0 24 24"><path d="M4 20L20 4M4 12h4M12 4v4M4 16h2M16 4v2M8 4v2M4 8h2"/></svg></span>
+                                <div><div class="t">Units</div><div class="s" id="nrUnits">°F · psi</div></div>
+                                <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                            <button class="navrow" data-page="calibration">
+                                <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></span>
+                                <div><div class="t">Calibration</div><div class="s" id="nrCal">Placeholder table · spec §9.2</div></div>
+                                <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                            <button class="navrow" data-page="system">
+                                <span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span>
+                                <div><div class="t">System</div><div class="s" id="nrSystem">sim v6 · MCU 10 Hz</div></div>
+                                <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                            </div>
+                        </div>
+
+                        <!-- audio (was its own tab in v5) -->
+                        <div class="sh-page" id="pgAudio">
+                            <div class="sh-grid">
+                            <div class="sh-col">
+                                <div class="sh-card">
+                                    <div class="sh-row">
+                                        <div class="sl big">
+                                            <div class="lbl"><span>Volume</span><b id="vVol">62</b></div>
+                                            <input type="range" id="sVol" min="0" max="100" value="62">
+                                        </div>
+                                        <button class="toggle" id="btnMute">
+                                            <svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>
+                                            <div>
+                                                <div class="t">Mute</div>
+                                                <div class="s" id="muteState">Off</div>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="sh-card grow">
+                                    <div class="sl center">
+                                        <div class="lbl"><span>Balance</span><b id="vBal">0</b></div>
+                                        <input type="range" id="sBal" min="-10" max="10" value="0">
+                                        <div class="ends"><span>Left</span><span>Right</span></div>
+                                    </div>
+                                    <div class="sl center">
+                                        <div class="lbl"><span>Fader</span><b id="vFade">0</b></div>
+                                        <input type="range" id="sFade" min="-10" max="10" value="0">
+                                        <div class="ends"><span>Rear</span><span>Front</span></div>
+                                    </div>
+                                    <div class="sl center">
+                                        <div class="lbl"><span>Sub level</span><b id="vSub">0<small>dB</small></b></div>
+                                        <input type="range" id="sSub" min="-12" max="6" value="0">
+                                        <div class="ends"><span>−12</span><span>+6</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sh-col">
+                                <div class="sh-card grow">
+                                    <div class="sl center">
+                                        <div class="lbl"><span>Bass</span><b id="vBass">0<small>dB</small></b></div>
+                                        <input type="range" id="sBass" min="-6" max="6" value="0">
+                                    </div>
+                                    <div class="sl center">
+                                        <div class="lbl"><span>Mid</span><b id="vMid">0<small>dB</small></b></div>
+                                        <input type="range" id="sMid" min="-6" max="6" value="0">
+                                    </div>
+                                    <div class="sl center">
+                                        <div class="lbl"><span>Treble</span><b id="vTreb">0<small>dB</small></b></div>
+                                        <input type="range" id="sTreb" min="-6" max="6" value="0">
+                                    </div>
+                                    <div class="ctl">
+                                        <div class="ctl-label">Preset</div>
+                                        <div class="seg" id="segPreset"></div>
+                                    </div>
+                                    <div class="sh-note">Tone and level shaping run as a Pi-side DSP stage before the SPDIF output. Crossovers, time alignment and room EQ stay in the amplifier's own tuning software.</div>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+
+                        <!-- theme + accent -->
+                        <div class="sh-page" id="pgTheme">
+                            <div class="sh-grid">
+                                <div class="sh-col">
+                                    <div class="sh-card">
+                                        <div class="ctl">
+                                            <div class="ctl-label">Theme</div>
+                                            <div class="seg" id="segTheme"></div>
+                                        </div>
+                                        <div class="sh-note">Auto follows the headlamp relay: light by day, dark once the lamps are on. The sun/moon button in the status bar sets an explicit theme and leaves Auto.</div>
+                                    </div>
+                                    <div class="sh-card grow">
+                                        <div class="ctl-label">Preview</div>
+                                        <div class="preview">
+                                        <div class="seg"><button>Off</button><button class="on">1</button><button>2</button></div>
+                                        <button class="toggle on">
+                                            <svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20M4.9 4.9l14.2 14.2M19.1 4.9L4.9 19.1"/></svg>
+                                            <div><div class="t">A/C</div><div class="s">Preview</div></div>
+                                        </button>
+                                        <div class="bar"><i></i></div>
+                                    </div>
+                                        <div class="sh-note">How selected controls, toggles and level bars look with this accent. Nothing here is live.</div>
+                                    </div>
+                                </div>
+                                <div class="sh-col">
+                                    <div class="sh-card grow" id="cardAccent">
+                                    <div class="ctl-label">Accent <span class="hint" id="accentHex">#FF6A2B</span></div>
+                                    <div class="swatches" id="swatches"></div>
+                                    <div class="sl hue">
+                                        <div class="lbl"><span>Custom hue</span><b id="vHue">18°</b></div>
+                                        <input type="range" id="sHue" min="0" max="359" value="18">
+                                    </div>
+                                    <div class="sh-note">The accent marks what is selected or interactive. Warnings stay red and amber and gauges stay monochrome whatever you choose.</div>
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- units -->
+                        <div class="sh-page" id="pgUnits">
+                            <div class="sh-grid">
+                                <div class="sh-col">
+                                    <div class="sh-card grow">
+                                        <div class="ctl">
+                                            <div class="ctl-label">Temperature</div>
+                                            <div class="seg" id="segTemp"></div>
+                                        </div>
+                                        <div class="sh-note">Coolant arc rescales to 100–260 °F with the redline at 235, or 40–120 °C with the redline at 113. Alert banners follow.</div>
+                                    </div>
+                                </div>
+                                <div class="sh-col">
+                                    <div class="sh-card grow">
+                                        <div class="ctl">
+                                            <div class="ctl-label">Pressure</div>
+                                            <div class="seg" id="segPress"></div>
+                                        </div>
+                                        <div class="sh-note">Oil arc rescales to 0–80 psi with the low zone 0–12, or 0–6 bar with the low zone 0–0.8. Alert banners follow.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- calibration (spec §9.2): raw counts beside converted values, one-tap capture -->
+                        <div class="sh-page" id="pgCal">
+                            <div class="calbanner">
+                                <b>Placeholder table</b> — identity mapping from config/calibration.json. Nothing shown here is calibrated; the gauges are not measurements until every channel has 8 captured points and a save has succeeded on the MCU.
+                            </div>
+                            <div class="calgrid">
+                            <div class="sh-card calcard" data-ch="fuel">
+                                <div class="ctl-label">Fuel <span class="hint" id="calPtsfuel">2 points · placeholder</span></div>
+                                <div class="calvals">
+                                    <div><div class="k">Raw count</div><div class="big" id="calRawfuel">—</div></div>
+                                    <div><div class="k">Converted</div><div class="big" id="calValfuel">—</div><div class="u">fraction</div></div>
+                                </div>
+                                <div class="toggles">
+                                    <button class="toggle calAdd" data-ch="fuel">
+                                        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                                        <div><div class="t">Capture</div><div class="s">cal add</div></div>
+                                    </button>
+                                    <button class="toggle calSave" data-ch="fuel" disabled>
+                                        <svg viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg>
+                                        <div><div class="t">Save</div><div class="s" id="calSaveSfuel">needs 8 points</div></div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="sh-card calcard" data-ch="oil">
+                                <div class="ctl-label">Oil pressure <span class="hint" id="calPtsoil">2 points · placeholder</span></div>
+                                <div class="calvals">
+                                    <div><div class="k">Raw count</div><div class="big" id="calRawoil">—</div></div>
+                                    <div><div class="k">Converted</div><div class="big" id="calValoil">—</div><div class="u">psi</div></div>
+                                </div>
+                                <div class="toggles">
+                                    <button class="toggle calAdd" data-ch="oil">
+                                        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                                        <div><div class="t">Capture</div><div class="s">cal add</div></div>
+                                    </button>
+                                    <button class="toggle calSave" data-ch="oil" disabled>
+                                        <svg viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg>
+                                        <div><div class="t">Save</div><div class="s" id="calSaveSoil">needs 8 points</div></div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="sh-card calcard" data-ch="clt">
+                                <div class="ctl-label">Coolant <span class="hint" id="calPtsclt">2 points · placeholder</span></div>
+                                <div class="calvals">
+                                    <div><div class="k">Raw count</div><div class="big" id="calRawclt">—</div></div>
+                                    <div><div class="k">Converted</div><div class="big" id="calValclt">—</div><div class="u">°F</div></div>
+                                </div>
+                                <div class="toggles">
+                                    <button class="toggle calAdd" data-ch="clt">
+                                        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                                        <div><div class="t">Capture</div><div class="s">cal add</div></div>
+                                    </button>
+                                    <button class="toggle calSave" data-ch="clt" disabled>
+                                        <svg viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg>
+                                        <div><div class="t">Save</div><div class="s" id="calSaveSclt">needs 8 points</div></div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="sh-card calcard" data-ch="volt">
+                                <div class="ctl-label">System voltage <span class="hint" id="calPtsvolt">2 points · placeholder</span></div>
+                                <div class="calvals">
+                                    <div><div class="k">Raw count</div><div class="big" id="calRawvolt">—</div></div>
+                                    <div><div class="k">Converted</div><div class="big" id="calValvolt">—</div><div class="u">V</div></div>
+                                </div>
+                                <div class="toggles">
+                                    <button class="toggle calAdd" data-ch="volt">
+                                        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                                        <div><div class="t">Capture</div><div class="s">cal add</div></div>
+                                    </button>
+                                    <button class="toggle calSave" data-ch="volt" disabled>
+                                        <svg viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg>
+                                        <div><div class="t">Save</div><div class="s" id="calSaveSvolt">needs 8 points</div></div>
+                                    </button>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+
+                        <!-- system -->
+                        <div class="sh-page" id="pgSystem">
+                            <div class="sh-grid">
+                                <div class="sh-col">
+                                    <div class="sh-card grow">
+                                        <div class="ctl-label">Console</div>
+                                        <div>
+                                            <div class="kv"><span>Panel</span><b>800 × 1280 · drawn @2x</b></div>
+                                            <div class="kv"><span>CarPlay well</span><b>760 × 696 · 1520 × 1392 @2x</b></div>
+                                            <div class="kv"><span>Console build</span><b>sim v6 · nested settings</b></div>
+                                            <div class="kv"><span>Display host</span><b>Pi CM4 · KMS / GLES2</b></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="sh-col">
+                                    <div class="sh-card grow">
+                                        <div class="ctl-label">Sensor board</div>
+                                        <div>
+                                            <div class="kv"><span>MCU link</span><b id="kvLink">10 Hz · ok</b></div>
+                                            <div class="kv"><span>Firmware</span><b>c3fw · ESP32-S3</b></div>
+                                            <div class="kv"><span>Calibration</span><b id="kvCal">placeholder</b></div>
+                                        </div>
+                                        <div class="toggles">
+                                            <button class="toggle" id="btnReset">
+                                                <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                                                <div><div class="t">Reset</div><div class="s">Defaults</div></div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="poweredby"><img src="../assets/studios.svg" alt="">Powered by Suehr Studios</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="alerts"></div>
+                <div id="volpill">
+                    <svg class="pri" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a8 8 0 0 1 0 11"/></svg>
+                    <div class="bar"><i id="volFill" style="width:62%"></i></div>
+                    <span class="n" id="volNum">62</span>
+                </div>
+            </div>
+
+            <!-- ============ control dock ============ -->
+            <div id="dock" class="region">
+                <div class="ctl island" id="islHvac">
+                    <div class="ctl-label">HVAC</div>
+                    <div class="seg" id="segMode"></div>
+                    <div class="seg" id="segFan"></div>
+                    <div class="toggles">
+                        <button class="toggle" id="btnAc">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 2v20M2 12h20M4.9 4.9l14.2 14.2M19.1 4.9L4.9 19.1" />
+                                <path d="M12 2l-2.5 2.5M12 2l2.5 2.5M12 22l-2.5-2.5M12 22l2.5-2.5" />
+                            </svg>
+                            <div>
+                                <div class="t">A/C</div>
+                                <div class="s" id="acState">Off</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                <div class="ctl island" id="islLights">
+                    <div class="ctl-label">Lights</div>
+                    <div class="toggles col">
+                        <button class="toggle" id="btnDoors">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M3 14c2.5-4.5 5.5-7 9-7s6.5 2.5 9 7" />
+                                <path d="M3 18h18" />
+                                <path d="M12 7V4" />
+                            </svg>
+                            <div>
+                                <div class="t">Doors</div>
+                                <div class="s" id="doorState">Closed</div>
+                            </div>
+                        </button>
+                        <button class="toggle" id="btnHead">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M9 6a6 6 0 1 0 0 12h3V6H9z" />
+                                <path d="M15 8h6M15 12h6M15 16h6" />
+                            </svg>
+                            <div>
+                                <div class="t">Lights</div>
+                                <div class="s" id="headState">Off</div>
+                            </div>
+                        </button>
+                        <button class="toggle" id="btnHigh">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M9 6a6 6 0 1 0 0 12h3V6H9z" />
+                                <path d="M15 7l6-2M15 12h6M15 17l6 2" />
+                            </svg>
+                            <div>
+                                <div class="t">High Beams</div>
+                                <div class="s" id="highState">Off</div>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="ctl-hint">Parallel to the factory switches</div>
+                </div>
+            </div>
+
+            <!-- ============ mechanical lever hint ============ -->
+            <div id="lever" class="region">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 4v16M6 14l6 6 6-6" />
+                </svg>
+                Temperature · mechanical lever below screen
+            </div>
+
+            <div id="layoutov"></div>
+        </div>
+    </div>
+
+    <!-- ============ sim drawer ============ -->
+    <div id="drawer">
+        <h2>Tier 0 simulator · v4</h2>
+        <div class="body">
+            <div class="grp">
+                <label>Drive profile</label>
+                <div class="chips" id="profiles"></div>
+            </div>
+            <div class="grp">
+                <label>Fault injection (MCU-side)</label>
+                <div class="chips" id="faults"></div>
+            </div>
+            <div class="grp">
+                <label>Manual override</label>
+                <div class="slider"><span class="n">oil</span><input type="range" id="ovOil" min="0" max="80" step="0.5"
+                        value="42"><span class="n" id="nOil">—</span></div>
+                <div class="slider"><span class="n">clt</span><input type="range" id="ovClt" min="60" max="260" step="1"
+                        value="195"><span class="n" id="nClt">—</span></div>
+                <div class="slider"><span class="n">fuel</span><input type="range" id="ovFuel" min="0" max="100"
+                        step="1" value="62"><span class="n" id="nFuel">—</span></div>
+                <div class="slider"><span class="n">volt</span><input type="range" id="ovVolt" min="9" max="16"
+                        step="0.1" value="14.2"><span class="n" id="nVolt">—</span></div>
+                <div class="chips"><span class="simchip" id="chipManual">manual mode off</span></div>
+            </div>
+            <div class="grp">
+                <label>Audio &amp; camera</label>
+                <div class="slider"><span class="n">knob</span><input type="range" id="simVol" min="0" max="100" step="1" value="62"><span class="n" id="nVol">62</span></div>
+                <div class="chips">
+                    <span class="simchip" id="chipRev">reverse gear</span>
+                    <span class="simchip danger" id="chipCamFault">camera fault</span>
+                </div>
+                <div class="chips"><span class="simchip" style="cursor:default;opacity:.7">keys: ↑ ↓ volume · M mute · R reverse</span></div>
+            </div>
+            <div class="grp">
+                <label>Link &amp; panel</label>
+                <div class="chips">
+                    <span class="simchip danger" id="chipStall">telemetry stall</span>
+                    <span class="simchip" id="chipCpWait">carplay disconnected</span>
+                    <span class="simchip" id="chipLight">light theme</span>
+                    <span class="simchip" id="chipNight">night dim</span>
+                    <span class="simchip" id="chipOneOne">1:1 pixels</span>
+                    <span class="simchip" id="chipLayout">layout rects</span>
+                </div>
+            </div>
+        </div>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        /* ======================================================================
+           C3 CONSOLE — TIER 0 SIMULATOR v4
+           v6 adds: three tabs (CarPlay · Camera · Settings); audio moves under Settings; one-level
+           nested settings navigation (back arrow appears below the root, × always returns to CarPlay);
+           Theme / Units / Calibration / System pages; S mark in the status bar; gauge columns swapped.
+           v5 adds: "islands" layout — surface tabs (CarPlay · Audio · Camera · Settings) under the
+           status bar, the well on top at 1568 × 1280, gauges below, control islands with
+           top-left titles, Suehr Studios brand mark. Surfaces cover the whole well; × returns to CarPlay.
+           v4 adds: settings sheet (theme incl. auto-by-headlamps, accent colour, units),
+           persisted in localStorage as a stand-in for a writable data partition.
+           v3 adds: audio sheet + volume pill (Pi audio stack), rear camera surface
+           (reverse from the MCU frame), status-bar tool buttons.
+           Logical panel: 1600 × 2560 design px = 800 × 1280 physical @2x (16:10 portrait).
+
+           Gauges are drawn in Canvas 2D deliberately: the path / arc / gradient
+           calls map almost 1:1 onto NanoVG, so this code ports to the C++ renderer
+           nearly line for line. Glow is a second, wider, translucent stroke
+           (no shadowBlur) so the port is straightforward.
+           ====================================================================== */
+
+        const THEMES = {
+            dark: {
+                bg: '#000000', ink: '#F5F3EE', ink2: '#9A9EA6', ink3: '#5B6068',
+                track: 'rgba(255,255,255,.08)', band: 'rgba(255,255,255,.10)',
+                zone: 'rgba(255,59,48,.30)',
+                fill0: '#CFCAC0', fill1: '#FFFFFF', marker: '#FFFFFF',
+                glow: 'rgba(255,255,255,.07)', halo: 'rgba(255,255,255,.40)',
+                ember: '#FF6A2B', amber: '#FFC24A', alarm: '#FF3B30'
+            },
+            light: {
+                bg: '#F3F1EC', ink: '#15171B', ink2: '#5A5F68', ink3: '#8B9099',
+                track: 'rgba(0,0,0,.08)', band: 'rgba(0,0,0,.09)',
+                zone: 'rgba(229,50,43,.28)',
+                fill0: '#4A4E56', fill1: '#15171B', marker: '#15171B',
+                glow: 'rgba(0,0,0,.06)', halo: 'rgba(0,0,0,.22)',
+                ember: '#FF6A2B', amber: '#E39A00', alarm: '#E5322B'
+            }
+        };
+        let T = THEMES.dark;
+        const F = { ui: '"Inter", system-ui, sans-serif', num: '"Barlow", "Inter", system-ui, sans-serif' };
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+        /* ---------------------------------------------------------------- layout
+           Single source of truth. Port to render/Layout.cpp.
+           The CarPlay well is 16-px aligned on both axes so the requested H.264
+           mode needs no cropping. */
+        const LAYOUT = (() => {
+            const W = 1600, H = 2560, M = 40, CW = W - 2 * M;          // CW = 1520 = 95 × 16
+            // v5 "islands" on the 800 × 1280 panel (drawn @2x): tabs under the status bar, the
+            // well on top as the hero, gauges below it, control islands at the bottom.
+            // Every rect halves to whole physical pixels; the well is 16-px aligned at 1×.
+            const status = { x: M, y: 0, w: CW, h: 88 };
+            const well = { x: M, y: 100, w: CW, h: 1392 };            // 1520 × 1392 → 760 × 696
+            const tabs = { x: M, y: 1504, w: CW, h: 64 };             // under the well
+            const cluster = { x: M, y: 1584, w: CW, h: 528 };
+            const dock = { x: M, y: 2128, w: CW, h: 392 };
+            const lever = { x: 0, y: 2524, w: W, h: 36 };
+            const g = 16, tw = (CW - 2 * g) / 3;                          // tile 496
+            const th = (cluster.h - g) / 2;                               // mini tile 256
+            const tiles = {
+                // v6: the small cards lead (fuel, systems), the two arcs sit to their right
+                fuel: { x: M, y: cluster.y, w: tw, h: th },
+                volt: { x: M, y: cluster.y + th + g, w: tw, h: th },
+                oil: { x: M + tw + g, y: cluster.y, w: tw, h: cluster.h },
+                clt: { x: M + 2 * (tw + g), y: cluster.y, w: tw, h: cluster.h },
+            };
+            return { W, H, M, status, tabs, cluster, well, dock, lever, tiles };
+        })();
+
+        function place(el, r) {
+            el.style.left = r.x + 'px'; el.style.top = r.y + 'px';
+            el.style.width = r.w + 'px'; el.style.height = r.h + 'px';
+        }
+        const panel = document.getElementById('panel');
+        place(document.getElementById('status'), LAYOUT.status);
+        place(document.getElementById('tabs'), LAYOUT.tabs);
+        place(document.getElementById('wellwrap'), LAYOUT.well);
+        place(document.getElementById('dock'), LAYOUT.dock);
+        place(document.getElementById('lever'), LAYOUT.lever);
+        place(document.getElementById('tOil'), LAYOUT.tiles.oil);
+        place(document.getElementById('tClt'), LAYOUT.tiles.clt);
+        place(document.getElementById('tFuel'), LAYOUT.tiles.fuel);
+        place(document.getElementById('tVolt'), LAYOUT.tiles.volt);
+
+        let oneOne = false;
+        const scale = () => oneOne ? 1 : Math.min(innerWidth / LAYOUT.W, innerHeight / LAYOUT.H);
+        function fit() { panel.style.transform = `translateX(-50%) scale(${scale()})`; }
+        addEventListener('resize', fit);
+
+        // layout overlay
+        const ov = document.getElementById('layoutov');
+        [['status', LAYOUT.status], ['tabs', LAYOUT.tabs], ['cluster', LAYOUT.cluster], ['well (surface slot)', LAYOUT.well],
+        ['dock', LAYOUT.dock], ['lever hint', LAYOUT.lever],
+        ['oil', LAYOUT.tiles.oil], ['clt', LAYOUT.tiles.clt], ['fuel', LAYOUT.tiles.fuel], ['volt', LAYOUT.tiles.volt]]
+            .forEach(([n, r]) => {
+                const d = document.createElement('div'); place(d, r);
+                d.innerHTML = `<span>${n} · ${r.w}×${r.h} @ ${r.x},${r.y}</span>`;
+                ov.appendChild(d);
+            });
+
+        /* ------------------------------------------------------- telemetry model
+           Reference code for MockSource.cpp. Model, don't randomize.
+           Ported unchanged from the rough mockup except for the headlamp load
+           term in the voltage model (spec §9.1: "dips on blower and headlight load"). */
+        const PROFILES = {
+            ColdStart: { rpm: [820, 820], speed: 0, target: 70, drain: 0.00002 },
+            WarmupDrive: { rpm: [1900, 3100], speed: 45, target: 196, drain: 0.00028 },
+            HotIdle: { rpm: [760, 820], speed: 0, target: 214, drain: 0.00009 },
+            HighwayCruise: { rpm: [2600, 2900], speed: 70, target: 198, drain: 0.00034 }
+        };
+        const FAULTS = ['OilPressureLoss', 'Overheat', 'FuelLow', 'AlternatorFail', 'SenderOpenOil', 'SenderOpenFuel'];
+
+        const sim = {
+            profile: 'WarmupDrive',
+            faults: new Set(),
+            manual: false,
+            stall: false,
+            rev: false,           // reverse-gear input, read by the MCU from the reverse-lamp circuit
+            t: 0,
+            clt: 72, oil: 0, fuel: 0.62, volt: 14.2, rpm: 800,
+            // needle state — mechanical damping, separate from the value
+            nOil: 0, nClt: 72, nFuel: 0.62, nVolt: 14.2
+        };
+
+        function stepModel(dt) {
+            const p = PROFILES[sim.profile];
+            sim.t += dt;
+
+            // rpm wanders inside the profile band
+            const band = p.rpm[1] - p.rpm[0];
+            const wob = 0.5 + 0.5 * Math.sin(sim.t * 0.7) * (0.6 + 0.4 * Math.sin(sim.t * 0.23));
+            sim.rpm += ((p.rpm[0] + band * wob) - sim.rpm) * Math.min(1, dt * 2.2);
+
+            // coolant: first-order approach to setpoint, road speed helps it cool
+            let target = p.target - p.speed * 0.06;
+            if (sim.faults.has('Overheat')) target = 251;
+            sim.clt += (target - sim.clt) * Math.min(1, dt * 0.055);
+
+            // oil pressure: f(rpm, temp). high cold, ~40 hot cruise, ~15 hot idle
+            const viscosity = 1 + Math.max(0, (190 - sim.clt)) / 95;
+            let oil = (10 + sim.rpm * 0.0122) * viscosity;
+            if (sim.faults.has('OilPressureLoss')) oil *= Math.max(0.06, 1 - (sim.t % 22) / 16);
+            sim.oil += (Math.min(78, oil) - sim.oil) * Math.min(1, dt * 3.2);
+
+            // fuel: monotonic drain plus a slosh term
+            sim.fuel = Math.max(0, sim.fuel - p.drain * dt * 60);
+            if (sim.faults.has('FuelLow')) sim.fuel = Math.min(sim.fuel, 0.055);
+
+            // volts: charging, sagging under blower, compressor and lamp load
+            const load = hv.fan * 0.11 + (hv.ac ? 0.19 : 0) + (lamps.head ? 0.17 : 0) + 0.14;
+            let v = sim.faults.has('AlternatorFail') ? 11.6 - load * 0.5 : 14.35 - load * 0.16;
+            sim.volt += (v - sim.volt) * Math.min(1, dt * 1.9);
+        }
+
+        /* Simulated MCU-side fault evaluation. In the real system this lives in
+           firmware/esp32 and arrives in the frame's `faults` array. The Pi only
+           renders what it receives. Do not port this function to the Pi. */
+        function mcuFaults(r) {
+            const f = [];
+            if (r.openOil) f.push('SENDER_OPEN_OIL'); else if (r.oil < 12) f.push('OIL_LOW');
+            if (r.clt > 235) f.push('CLT_HIGH');
+            if (r.openFuel) f.push('SENDER_OPEN_FUEL'); else if (r.fuel < 0.08) f.push('FUEL_LOW');
+            if (r.volt < 12.4) f.push('VOLT_LOW'); else if (r.volt > 15.2) f.push('VOLT_HIGH');
+            return f;
+        }
+
+        // One telemetry frame as the Pi would receive it.
+        function readings() {
+            const r = sim.manual
+                ? { oil: +ovOil.value, clt: +ovClt.value, fuel: +ovFuel.value / 100, volt: +ovVolt.value }
+                : { oil: sim.oil, clt: sim.clt, fuel: sim.fuel, volt: sim.volt };
+            r.openOil = sim.faults.has('SenderOpenOil');
+            r.openFuel = sim.faults.has('SenderOpenFuel');
+            r.rev = sim.rev;
+            r.faults = mcuFaults(r);
+            return r;
+        }
+
+        /* ------------------------------------------------------------- helpers */
+        function tracking(ctx, px) { if ('letterSpacing' in ctx) ctx.letterSpacing = px + 'px'; }
+        function rrect(ctx, x, y, w, h, r) {
+            r = Math.min(r, h / 2, w / 2);
+            ctx.beginPath();
+            ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
+            ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+            ctx.lineTo(x + r, y + h); ctx.arcTo(x, y + h, x, y + h - r, r);
+            ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r); ctx.closePath();
+        }
+        const gaugeState = o => o.stale ? 'stale' : o.open ? 'open' : o.warn ? 'warn' : 'ok';
+
+        /* ------------------------------------------------------------- arc gauge
+           512 × 544 tile. 240° open arc, gap at the bottom. Scale numerals sit
+           inside the track so the arc can use the full tile width. */
+        function arcGauge(ctx, o) {
+            const w = ctx.canvas.width, h = ctx.canvas.height;
+            const cx = w / 2, cy = 330, R = 218;
+            const A0 = Math.PI * 5 / 6, SWEEP = Math.PI * 4 / 3, A1 = A0 + SWEEP;
+            const frac = v => clamp((v - o.min) / (o.max - o.min), 0, 1);
+            const ang = v => A0 + SWEEP * frac(v);
+            const P = (a, r) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+            const st = gaugeState(o), hot = st === 'warn';
+            const warnColor = o.severity === 'caution' ? T.amber : T.alarm;
+
+            ctx.clearRect(0, 0, w, h);
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+            // track
+            ctx.lineCap = 'round'; ctx.lineWidth = 18; ctx.strokeStyle = T.track;
+            ctx.beginPath(); ctx.arc(cx, cy, R, A0, A1); ctx.stroke();
+
+            // danger zone, flush on the track
+            if (o.zone && st !== 'stale') {
+                ctx.lineCap = 'butt'; ctx.strokeStyle = T.zone;
+                ctx.beginPath(); ctx.arc(cx, cy, R, ang(o.zone[0]), ang(o.zone[1])); ctx.stroke();
+            }
+
+            // major ticks + scale numerals, inside the track
+            const steps = Math.round((o.max - o.min) / o.major);
+            ctx.font = '500 24px ' + F.num;
+            for (let i = 0; i <= steps; i++) {
+                const v = o.min + i * o.major, a = ang(v);
+                const [x1, y1] = P(a, R - 16), [x2, y2] = P(a, R - 26);
+                ctx.strokeStyle = T.ink3; ctx.lineWidth = 2; ctx.lineCap = 'butt';
+                ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+                const [tx, ty] = P(a, R - 50);
+                ctx.fillStyle = st === 'stale' ? T.ink3 : T.ink2;
+                ctx.fillText(String(v), tx, ty);
+            }
+
+            // value arc + end marker
+            if (st === 'ok' || st === 'warn') {
+                const a = ang(o.needle);
+                ctx.lineCap = 'round';
+                if (a - A0 > 0.002) {
+                    ctx.lineWidth = 34;
+                    ctx.strokeStyle = hot ? 'rgba(255,59,48,.20)' : T.glow;
+                    ctx.beginPath(); ctx.arc(cx, cy, R, A0, a); ctx.stroke();
+                    const g = ctx.createLinearGradient(cx - R, cy, cx + R, cy);
+                    if (hot) { g.addColorStop(0, '#FF7A70'); g.addColorStop(1, warnColor); }
+                    else { g.addColorStop(0, T.fill0); g.addColorStop(1, T.fill1); }
+                    ctx.lineWidth = 18; ctx.strokeStyle = g;
+                    ctx.beginPath(); ctx.arc(cx, cy, R, A0, a); ctx.stroke();
+                }
+                const [ex, ey] = P(a, R);
+                const halo = ctx.createRadialGradient(ex, ey, 0, ex, ey, 32);
+                halo.addColorStop(0, hot ? 'rgba(255,59,48,.55)' : T.halo);
+                halo.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(ex, ey, 32, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = hot ? warnColor : T.marker;
+                ctx.beginPath(); ctx.arc(ex, ey, 11, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = T.bg;
+                ctx.beginPath(); ctx.arc(ex, ey, 4, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // card title, top-left like every island (v5)
+            tracking(ctx, 3);
+            ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+            ctx.font = '500 25px ' + F.ui; ctx.fillStyle = T.ink3;
+            ctx.fillText(o.label, 33, 50);
+            tracking(ctx, 0);
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+            // numeral + unit / state
+            let caption = 'NORMAL', capColor = T.ink3;
+            if (st === 'stale') {
+                ctx.fillStyle = T.ink3; ctx.font = '300 120px ' + F.num; ctx.fillText('— —', cx, cy - 6);
+                tracking(ctx, 3); ctx.font = '500 26px ' + F.ui; ctx.fillText('NO DATA', cx, cy + 92); tracking(ctx, 0);
+                caption = 'TELEMETRY LOST'; capColor = T.ink3;
+            } else if (st === 'open') {
+                ctx.fillStyle = T.alarm; ctx.font = '300 120px ' + F.num; ctx.fillText('— —', cx, cy - 6);
+                tracking(ctx, 3); ctx.font = '500 26px ' + F.ui; ctx.fillText('SENDER OPEN', cx, cy + 92); tracking(ctx, 0);
+                caption = 'CHECK SENDER WIRING'; capColor = T.alarm;
+            } else {
+                ctx.fillStyle = hot ? warnColor : T.ink; ctx.font = '300 140px ' + F.num;
+                ctx.fillText(o.value.toFixed(o.dp), cx, cy - 6);
+                ctx.fillStyle = T.ink2; ctx.font = '500 28px ' + F.ui; ctx.fillText(o.unit, cx, cy + 92);
+                if (hot) { caption = o.warnText; capColor = warnColor; }
+            }
+            tracking(ctx, 3);
+            ctx.font = '500 22px ' + F.ui; ctx.fillStyle = capColor;
+            ctx.fillText(caption, cx, 504);
+            tracking(ctx, 0);
+        }
+
+        /* ------------------------------------------------------------- bar gauge
+           512 × 264 tile. */
+        function barGauge(ctx, o) {
+            const w = ctx.canvas.width, h = ctx.canvas.height;
+            const x0 = 36, x1 = w - 36, bw = x1 - x0, by = 174, bh = 14;   // v6: track raised so the scale clears the card edge
+            const frac = v => clamp((v - o.min) / (o.max - o.min), 0, 1);
+            const st = gaugeState(o), hot = st === 'warn';
+            const warnColor = o.severity === 'caution' ? T.amber : T.alarm;
+
+            ctx.clearRect(0, 0, w, h);
+            ctx.textBaseline = 'alphabetic';
+
+            // card title, top-left like every island (v5)
+            tracking(ctx, 3);
+            ctx.textAlign = 'left'; ctx.font = '500 25px ' + F.ui; ctx.fillStyle = T.ink3;
+            ctx.fillText(o.label, 33, 50);
+
+            // right-hand state caption
+            ctx.textAlign = 'right'; ctx.font = '500 22px ' + F.ui;
+            if (st === 'stale') { ctx.fillStyle = T.ink3; ctx.fillText('NO DATA', x1 - 4, 50); }
+            else if (st === 'open') { ctx.fillStyle = T.alarm; ctx.fillText('SENDER OPEN', x1 - 4, 50); }
+            else if (hot) { ctx.fillStyle = warnColor; ctx.fillText(o.warnText, x1 - 4, 50); }
+            tracking(ctx, 0);
+
+            // numeral
+            ctx.textAlign = 'left';
+            if (st === 'stale' || st === 'open') {
+                ctx.fillStyle = st === 'open' ? T.alarm : T.ink3;
+                ctx.font = '300 96px ' + F.num; ctx.fillText('— —', x0, 146);
+            } else {
+                const text = o.value.toFixed(o.dp);
+                ctx.fillStyle = hot ? warnColor : T.ink; ctx.font = '300 96px ' + F.num;
+                ctx.fillText(text, x0, 146);
+                const tw = ctx.measureText(text).width;
+                ctx.fillStyle = T.ink2; ctx.font = '500 28px ' + F.ui;
+                ctx.fillText(o.unit, x0 + tw + 12, 146);
+            }
+
+            // track, normal band, danger zone
+            ctx.fillStyle = T.track; rrect(ctx, x0, by, bw, bh, 7); ctx.fill();
+            if (st !== 'stale') {
+                if (o.band) {
+                    const a = x0 + bw * frac(o.band[0]), b = x0 + bw * frac(o.band[1]);
+                    ctx.fillStyle = T.band; rrect(ctx, a, by, b - a, bh, 7); ctx.fill();
+                }
+                if (o.zone) {
+                    const a = x0 + bw * frac(o.zone[0]), b = x0 + bw * frac(o.zone[1]);
+                    ctx.fillStyle = T.zone; rrect(ctx, a, by, b - a, bh, 7); ctx.fill();
+                }
+            }
+
+            // fill + end marker
+            if (st === 'ok' || st === 'warn') {
+                const fw = Math.max(bh, bw * frac(o.needle));
+                const g = ctx.createLinearGradient(x0, 0, x0 + bw, 0);
+                if (hot) { g.addColorStop(0, hot && o.severity === 'caution' ? '#FFD98A' : '#FF7A70'); g.addColorStop(1, warnColor); }
+                else { g.addColorStop(0, T.fill0); g.addColorStop(1, T.fill1); }
+                ctx.fillStyle = T.glow;
+                rrect(ctx, x0 - 6, by - 6, fw + 12, bh + 12, 13); ctx.fill();
+                ctx.fillStyle = g; rrect(ctx, x0, by, fw, bh, 7); ctx.fill();
+                const ex = x0 + fw - bh / 2, ey = by + bh / 2;
+                ctx.fillStyle = hot ? warnColor : T.marker;
+                ctx.beginPath(); ctx.arc(ex, ey, 10, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = T.bg; ctx.beginPath(); ctx.arc(ex, ey, 3.5, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // scale marks
+            ctx.textAlign = 'center'; ctx.font = '500 22px ' + F.num;
+            o.marks.forEach(m => {
+                const mx = x0 + bw * frac(m.v);
+                ctx.strokeStyle = T.ink3; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(mx, by + bh + 10); ctx.lineTo(mx, by + bh + 18); ctx.stroke();
+                ctx.fillStyle = T.ink3; ctx.fillText(m.t, mx, by + bh + 46);
+            });
+        }
+
+        /* ------------------------------------------------------------ hvac/lamps */
+        const hv = { ac: false, fan: 0, mode: 'VENT' };
+        const lamps = { head: false, doors: false, high: false };
+        const MODES = [
+            { id: 'VENT', label: 'Vent', icon: '<svg viewBox="0 0 24 24"><path d="M3 8h10a3 3 0 1 0-3-3M3 12h14a3 3 0 1 1-3 3M3 16h7a2 2 0 1 1-2 2"/></svg>' },
+            { id: 'FLOOR', label: 'Floor', icon: '<svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"/></svg>' },
+            { id: 'DEFROST', label: 'Defrost', icon: '<svg viewBox="0 0 24 24"><path d="M3 18c0-6.5 4-12 9-12s9 5.5 9 12"/><path d="M8 11c1 1.5 1 3 0 4.5M12 10c1 1.5 1 3 0 4.5M16 11c1 1.5 1 3 0 4.5"/></svg>' }
+        ];
+
+        const segFan = document.getElementById('segFan');
+        ['Off', '1', '2', '3', '4'].forEach((t, i) => {
+            const b = document.createElement('button');
+            b.textContent = t;
+            b.onclick = () => { hv.fan = i; syncHvac(); relay('hvac', { blower: i, ac: hv.ac, mode: hv.mode.toLowerCase() }); };
+            segFan.appendChild(b);
+        });
+        const segMode = document.getElementById('segMode');
+        MODES.forEach(m => {
+            const b = document.createElement('button');
+            b.innerHTML = m.icon + '<span>' + m.label + '</span>';
+            b.onclick = () => { hv.mode = m.id; syncHvac(); relay('hvac', { blower: hv.fan, ac: hv.ac, mode: m.id.toLowerCase() }); };
+            segMode.appendChild(b);
+        });
+        document.getElementById('btnAc').onclick = () => {
+            hv.ac = !hv.ac; syncHvac();
+            relay('hvac', { blower: hv.fan, ac: hv.ac, mode: hv.mode.toLowerCase() });
+        };
+        document.getElementById('btnHead').onclick = () => {
+            lamps.head = !lamps.head; if (!lamps.head) lamps.high = false; syncHvac();
+            relay('lamp', { headlights: lamps.head, high: lamps.high, doors: lamps.doors });
+        };
+        document.getElementById('btnDoors').onclick = () => {
+            lamps.doors = !lamps.doors; syncHvac();
+            relay('lamp', { headlights: lamps.head, high: lamps.high, doors: lamps.doors });
+        };
+        // High beams: a second parallel relay, across the dimmer's high-beam contact (lt green on
+        // the 1975 diagram). The factory dimmer stays authoritative, and high implies lights on.
+        document.getElementById('btnHigh').onclick = () => {
+            lamps.high = !lamps.high; if (lamps.high) lamps.head = true; syncHvac();
+            relay('lamp', { headlights: lamps.head, high: lamps.high, doors: lamps.doors });
+        };
+        function syncHvac() {
+            [...segFan.children].forEach((b, i) => b.classList.toggle('on', i === hv.fan));
+            [...segMode.children].forEach((b, i) => b.classList.toggle('on', MODES[i].id === hv.mode));
+            btnAc.classList.toggle('on', hv.ac);
+            acState.textContent = hv.ac ? 'On' : 'Off';
+            btnHead.classList.toggle('on', lamps.head);
+            headState.textContent = lamps.head ? 'On' : 'Off';
+            btnDoors.classList.toggle('on', lamps.doors);
+            doorState.textContent = lamps.doors ? 'Open' : 'Closed';
+            btnHigh.classList.toggle('on', lamps.high);
+            highState.textContent = lamps.high ? 'On' : 'Off';
+            if (typeof settings !== 'undefined') applyThemeSetting();
+        }
+
+        /* ----------------------------------------------------------------- logger */
+        const logEl = document.getElementById('log');
+        function logline(html) {
+            const d = document.createElement('div'); d.innerHTML = html;
+            logEl.appendChild(d);
+            while (logEl.children.length > 160) logEl.removeChild(logEl.firstChild);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        function relay(cmd, obj) { logline('<b>→ MCU</b> ' + JSON.stringify({ cmd, ...obj })); }
+
+        /* --------------------------------------------- carplay well + touch bridge
+           Containment is tested against the well RECT. The 28 px corner radius is
+           purely cosmetic (drawn over the video), so the touch transform stays a
+           plain rectangle — matches layout.carplayRect.contains() in the spec. */
+        const well = document.getElementById('well');
+        const geom = document.getElementById('geom');
+        geom.textContent = `carplay ${LAYOUT.well.w} × ${LAYOUT.well.h} px  ·  request this mode from the dongle`;
+
+        function wellLocal(e) {
+            const r = well.getBoundingClientRect(), s = scale();
+            return { x: Math.round((e.clientX - r.left) / s), y: Math.round((e.clientY - r.top) / s) };
+        }
+        well.addEventListener('pointerdown', e => {
+            if (activeSurface !== 'carplay') {
+                logline('<b>ui</b> touch consumed by ' + activeSurface + ' surface — not forwarded to dongle');
+                return;
+            }
+            const p = wellLocal(e);
+            const rip = document.createElement('div');
+            rip.className = 'ripple'; rip.style.left = p.x + 'px'; rip.style.top = p.y + 'px';
+            well.appendChild(rip); setTimeout(() => rip.remove(), 480);
+            logline('<i>→ dongle</i> ' + JSON.stringify({ touch: p, phase: 'down' }));
+        });
+        well.addEventListener('pointerup', e => {
+            if (activeSurface !== 'carplay') return;
+            logline('<i>→ dongle</i> ' + JSON.stringify({ touch: wellLocal(e), phase: 'up' }));
+        });
+
+        /* ----------------------------------------------------------------- alerts */
+        const ALERT = {
+            OIL_LOW: { level: 'alarm', title: 'Low oil pressure', icon: 'warn', detail: r => { const x = fmtPress(r.oil); return x.n + '<small>' + x.u + '</small>'; } },
+            CLT_HIGH: { level: 'alarm', title: 'Coolant overheat', icon: 'warn', detail: r => { const x = fmtTemp(r.clt); return x.n + '<small>' + x.u + '</small>'; } },
+            SENDER_OPEN_OIL: { level: 'alarm', title: 'Oil pressure sender open', icon: 'plug', detail: () => '<small>check wiring</small>' },
+            SENDER_OPEN_FUEL: { level: 'neutral', title: 'Fuel sender open', icon: 'plug', detail: () => '<small>check wiring</small>' },
+            FUEL_LOW: { level: 'amber', title: 'Low fuel', icon: 'fuel', detail: r => (r.fuel * 100).toFixed(0) + '<small>% remaining</small>' },
+            VOLT_LOW: { level: 'amber', title: 'Charging system', icon: 'bolt', detail: r => r.volt.toFixed(1) + '<small>V · low</small>' },
+            VOLT_HIGH: { level: 'amber', title: 'Charging system', icon: 'bolt', detail: r => r.volt.toFixed(1) + '<small>V · high</small>' },
+        };
+        const ICON = {
+            warn: '<svg viewBox="0 0 24 24"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 10v4M12 17.5v.5"/></svg>',
+            plug: '<svg viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0V8zM12 17v4"/></svg>',
+            fuel: '<svg viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M6 7h6v4H6zM14 9h2l3 3v6a2 2 0 0 1-4 0v-3"/></svg>',
+            bolt: '<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>',
+            link: '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/><path d="M4 4l16 16"/></svg>',
+        };
+        const SEVERITY = { alarm: 0, amber: 1, neutral: 2 };
+        const SHORT = { OIL_LOW: 'OIL', CLT_HIGH: 'COOLANT', FUEL_LOW: 'FUEL', VOLT_LOW: 'CHARGING', VOLT_HIGH: 'CHARGING', SENDER_OPEN_OIL: 'SENDER', SENDER_OPEN_FUEL: 'SENDER' };
+
+        const alertsEl = document.getElementById('alerts');
+        let alertSig = '';
+        function renderAlerts(r, stale, ageMs) {
+            let items = [];
+            if (stale) {
+                items.push({ level: 'neutral', title: 'No telemetry', icon: 'link', html: (ageMs / 1000).toFixed(1) + '<small>s since last frame · HVAC holds last state</small>' });
+            } else {
+                items = r.faults.map(f => ({ level: ALERT[f].level, title: ALERT[f].title, icon: ALERT[f].icon, html: ALERT[f].detail(r) }))
+                    .sort((a, b) => SEVERITY[a.level] - SEVERITY[b.level]);
+            }
+            const sig = items.map(i => i.level + i.title).join('|');
+            if (sig !== alertSig) {
+                alertSig = sig;
+                alertsEl.innerHTML = items.map(i =>
+                    `<div class="banner ${i.level}">${ICON[i.icon]}<span class="t">${i.title}</span><span class="d"></span></div>`).join('');
+            }
+            [...alertsEl.children].forEach((el, i) => el.querySelector('.d').innerHTML = items[i].html);
+
+            // status chip
+            const chip = document.getElementById('chipWarn');
+            if (stale) { chip.hidden = false; chip.className = 'chip neutral'; chipWarnText.textContent = 'LINK LOST'; }
+            else if (items.length) {
+                chip.hidden = false;
+                chip.className = 'chip ' + items[0].level;
+                chipWarnText.textContent = items.length === 1 ? SHORT[r.faults.sort((a, b) => SEVERITY[ALERT[a].level] - SEVERITY[ALERT[b].level])[0]] : items.length + ' FAULTS';
+            } else chip.hidden = true;
+        }
+
+        /* ------------------------------------------------------------ sim drawer */
+        const drawer = document.getElementById('drawer');
+        document.getElementById('toggle').onclick = () => drawer.classList.toggle('open');
+
+        const profEl = document.getElementById('profiles');
+        Object.keys(PROFILES).forEach(p => {
+            const c = document.createElement('span');
+            c.className = 'simchip' + (p === sim.profile ? ' on' : ''); c.textContent = p;
+            c.onclick = () => {
+                sim.profile = p;
+                [...profEl.children].forEach(x => x.classList.toggle('on', x.textContent === p));
+                logline('<b>profile</b> ' + p);
+            };
+            profEl.appendChild(c);
+        });
+        const faultEl = document.getElementById('faults');
+        FAULTS.forEach(f => {
+            const c = document.createElement('span');
+            c.className = 'simchip danger'; c.textContent = f;
+            c.onclick = () => {
+                sim.faults.has(f) ? sim.faults.delete(f) : sim.faults.add(f);
+                c.classList.toggle('on', sim.faults.has(f));
+                logline('<b>fault</b> ' + f + ' ' + (sim.faults.has(f) ? 'ON' : 'off'));
+            };
+            faultEl.appendChild(c);
+        });
+
+        const chipManual = document.getElementById('chipManual');
+        function setManual(on) {
+            sim.manual = on; chipManual.classList.toggle('on', on);
+            chipManual.textContent = on ? 'manual mode on' : 'manual mode off';
+        }
+        chipManual.onclick = () => setManual(!sim.manual);
+        ['ovOil', 'ovClt', 'ovFuel', 'ovVolt'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => { if (!sim.manual) setManual(true); });
+        });
+
+        document.getElementById('chipStall').onclick = function () {
+            sim.stall = !sim.stall; this.classList.toggle('on', sim.stall);
+            logline('<b>link</b> telemetry ' + (sim.stall ? 'STALLED' : 'resumed'));
+        };
+        document.getElementById('chipNight').onclick = function () { panel.classList.toggle('night'); this.classList.toggle('on'); };
+        let themeName = 'dark';
+        function setTheme(name) {
+            if (name === themeName && T === THEMES[name]) return;
+            themeName = name;
+            T = THEMES[name];
+            panel.classList.toggle('light', name === 'light');
+            btnTheme.setAttribute('aria-label', name === 'light' ? 'Switch to dark theme' : 'Switch to light theme');
+            chipLight.classList.toggle('on', name === 'light');
+            logline('<b>theme</b> ' + name);
+        }
+        btnTheme.onclick = () => setThemePref(themeName === 'dark' ? 'light' : 'dark');
+        document.getElementById('chipLight').onclick = () => setThemePref(themeName === 'dark' ? 'light' : 'dark');
+        document.getElementById('chipOneOne').onclick = function () { oneOne = !oneOne; this.classList.toggle('on'); fit(); };
+        document.getElementById('chipCpWait').onclick = function () {
+            const on = document.getElementById('cpwait').classList.toggle('show');
+            this.classList.toggle('on', on);
+            document.getElementById('dotCp').classList.toggle('off', on);
+        };
+        document.getElementById('chipLayout').onclick = function () { ov.classList.toggle('show'); this.classList.toggle('on'); };
+
+        /* ------------------------------------------------------------------ audio
+           Everything here is the Pi's job (spec §1: display, CarPlay, audio).
+           Commands go to the local audio stack, never to the MCU. */
+        const audio = { vol: 62, mute: false, bal: 0, fade: 0, sub: 0, bass: 0, mid: 0, treb: 0, preset: 'Flat' };
+        const PRESETS = { Flat: [0, 0, 0], Rock: [4, -1, 3], Cruise: [2, 0, 1], Voice: [-3, 3, 1] };
+        const audioCmd = obj => logline('<i>→ audio</i> ' + JSON.stringify(obj));
+        const signed = v => (v > 0 ? '+' : '') + v;
+
+        let pillT = 0;
+        function showVolPill() {
+            volpill.classList.add('show');
+            clearTimeout(pillT); pillT = setTimeout(() => volpill.classList.remove('show'), 1500);
+        }
+        function setVol(v, fromKnob) {
+            audio.vol = clamp(Math.round(v), 0, 100);
+            if (fromKnob && audio.mute) audio.mute = false;      // turning the knob un-mutes, like every car
+            syncAudio(); audioCmd({ vol: audio.vol, mute: audio.mute }); if (!audioShowing()) showVolPill();
+        }
+        function setMute(on) { audio.mute = on; syncAudio(); audioCmd({ mute: on }); if (!audioShowing()) showVolPill(); }
+        function setTone(b, m, t, preset) {
+            audio.bass = b; audio.mid = m; audio.treb = t;
+            audio.preset = preset || (Object.entries(PRESETS).find(([, v]) => v[0] === b && v[1] === m && v[2] === t) || ['Custom'])[0];
+            syncAudio(); audioCmd({ tone: { bass: b, mid: m, treble: t }, preset: audio.preset });
+        }
+        function syncAudio() {
+            const pct = audio.mute ? 0 : audio.vol;
+            sVol.value = audio.vol; sVol.style.setProperty('--p', audio.vol + '%'); vVol.textContent = audio.vol;
+            volFill.style.width = pct + '%'; volNum.textContent = audio.mute ? 'MUTE' : audio.vol;
+            volpill.classList.toggle('muted', audio.mute);
+            nrAudio.textContent = (audio.mute ? 'Muted' : 'Volume ' + audio.vol) + ' · ' + audio.preset;
+            btnMute.classList.toggle('on', audio.mute); muteState.textContent = audio.mute ? 'On' : 'Off';
+            sBal.value = audio.bal; vBal.textContent = audio.bal === 0 ? '0' : (audio.bal < 0 ? 'L' : 'R') + Math.abs(audio.bal);
+            sFade.value = audio.fade; vFade.textContent = audio.fade === 0 ? '0' : (audio.fade < 0 ? 'R' : 'F') + Math.abs(audio.fade);
+            sSub.value = audio.sub; vSub.innerHTML = signed(audio.sub) + '<small>dB</small>';
+            sBass.value = audio.bass; vBass.innerHTML = signed(audio.bass) + '<small>dB</small>';
+            sMid.value = audio.mid; vMid.innerHTML = signed(audio.mid) + '<small>dB</small>';
+            sTreb.value = audio.treb; vTreb.innerHTML = signed(audio.treb) + '<small>dB</small>';
+            [...segPreset.children].forEach(b => b.classList.toggle('on', b.textContent === audio.preset));
+            simVol.value = audio.vol; nVol.textContent = audio.vol;
+        }
+        Object.keys(PRESETS).forEach(name => {
+            const b = document.createElement('button'); b.textContent = name;
+            b.onclick = () => setTone(...PRESETS[name], name);
+            segPreset.appendChild(b);
+        });
+        sVol.addEventListener('input', () => setVol(+sVol.value, false));
+        sBal.addEventListener('input', () => { audio.bal = +sBal.value; syncAudio(); audioCmd({ balance: audio.bal }); });
+        sFade.addEventListener('input', () => { audio.fade = +sFade.value; syncAudio(); audioCmd({ fader: audio.fade }); });
+        sSub.addEventListener('input', () => { audio.sub = +sSub.value; syncAudio(); audioCmd({ sub_db: audio.sub }); });
+        sBass.addEventListener('input', () => setTone(+sBass.value, audio.mid, audio.treb));
+        sMid.addEventListener('input', () => setTone(audio.bass, +sMid.value, audio.treb));
+        sTreb.addEventListener('input', () => setTone(audio.bass, audio.mid, +sTreb.value));
+        btnMute.onclick = () => setMute(!audio.mute);
+
+        // encoder simulation: drawer slider, arrow keys, mouse wheel over the panel, M = push
+        simVol.addEventListener('input', () => setVol(+simVol.value, true));
+        panel.addEventListener('wheel', e => { e.preventDefault(); setVol(audio.vol + (e.deltaY < 0 ? 2 : -2), true); }, { passive: false });
+        addEventListener('keydown', e => {
+            if (e.target.tagName === 'INPUT') return;
+            if (e.key === 'ArrowUp') { e.preventDefault(); setVol(audio.vol + 2, true); }
+            else if (e.key === 'ArrowDown') { e.preventDefault(); setVol(audio.vol - 2, true); }
+            else if (e.key === 'm' || e.key === 'M') setMute(!audio.mute);
+            else if (e.key === 'r' || e.key === 'R') chipRev.click();
+            else if (e.key === 'Escape') { if (activeTab === 'settings' && pageStack.length > 1) popPage(); else setTab('carplay'); }
+        });
+
+        // v5: the well is a surface slot chosen by the tab bar. One surface shows at a time
+        // and covers the whole well; the close button on a surface is "back to CarPlay".
+        let activeTab = 'carplay';
+        const TABS = { carplay: tabCarplay, camera: tabCam, settings: tabSettings };   // v6: audio lives under Settings
+        function setTab(name) {
+            if (name === 'camera' && (cam.rev || performance.now() < cam.holdUntil)) return; // the car owns it
+            if (name === 'settings' && activeTab === 'settings') { resetPages(); return; }        // tab tap = back to the root
+            if (name !== 'settings') resetPages();                                                  // leaving settings forgets the stack
+            activeTab = name;
+            cam.manual = name === 'camera';
+            volpill.classList.remove('show'); clearTimeout(pillT);
+            logline('<b>ui</b> tab ' + name);
+        }
+        Object.entries(TABS).forEach(([name, el]) => el.onclick = () => setTab(name));
+        btnSetClose.onclick = () => setTab('carplay');                    // × is always "back to CarPlay", whatever the depth
+        sheetSet.addEventListener('pointerdown', e => e.stopPropagation());   // surfaces handle their own touches
+
+        /* v6: one-level nested navigation inside the settings surface. The stack is
+           ['root'] or ['root', page]. Back pops; × clears and returns to CarPlay; the
+           Settings tab, tapped while open, returns to the root. Port to app/well_controller. */
+        const PAGES = {
+            root: { el: pgRoot, title: 'Settings', sub: 'Stored on the console · writable data partition, not the phone' },
+            audio: { el: pgAudio, title: 'Audio', sub: 'Processing on Pi · SPDIF to DSP amp · knob is the primary volume control' },
+            theme: { el: pgTheme, title: 'Theme', sub: 'Appearance and accent · Auto follows the headlamp relay' },
+            units: { el: pgUnits, title: 'Units', sub: 'Gauge scales, redlines and banners follow' },
+            calibration: { el: pgCal, title: 'Calibration', sub: 'Spec §9.2 · raw counts beside converted values · one-tap capture' },
+            system: { el: pgSystem, title: 'System', sub: 'Console, sensor board and build' },
+        };
+        let pageStack = ['root'];
+        const currentPage = () => pageStack[pageStack.length - 1];
+        function renderPages() {
+            const cur = currentPage();
+            Object.entries(PAGES).forEach(([name, p]) => p.el.classList.toggle('show', name === cur));
+            shTitle.textContent = PAGES[cur].title; shSub.textContent = PAGES[cur].sub;
+            btnBack.hidden = pageStack.length <= 1;
+        }
+        function pushPage(name) { pageStack = ['root', name]; renderPages(); logline('<b>ui</b> settings › ' + name); }
+        function popPage() { if (pageStack.length > 1) { pageStack.pop(); renderPages(); logline('<b>ui</b> settings ‹ back'); } }
+        function resetPages() { if (pageStack.length > 1) { pageStack = ['root']; renderPages(); } }
+        btnBack.onclick = popPage;
+        document.querySelectorAll('.navrow').forEach(b => b.onclick = () => pushPage(b.dataset.page));
+        const audioShowing = () => activeSurface === 'settings' && currentPage() === 'audio';
+
+        /* ------------------------------------------------------------- rear camera
+           Reverse comes from the MCU frame (`rev`), sensed on the reverse-lamp
+           circuit through an opto. The camera itself is a USB UVC device on the
+           Pi, imported through the same V4L2 → DMA-BUF → texture path as CarPlay.
+           Well surface priority: camera (reverse or 2 s hold) > manual preview >
+           CarPlay. Frame loss shows "camera unavailable", never a frozen image. */
+        const cam = { rev: false, manual: false, fault: false, guides: true, holdUntil: 0 };
+        const kCamHoldMs = 2000;
+        let activeSurface = 'carplay';
+
+        btnCamClose.onclick = () => setTab('carplay');
+        btnGuides.onclick = () => { cam.guides = !cam.guides; btnGuides.classList.toggle('on', cam.guides); camview.classList.toggle('noguides', !cam.guides); };
+        camview.addEventListener('pointerdown', e => e.stopPropagation());
+        chipRev.onclick = function () { sim.rev = !sim.rev; this.classList.toggle('on', sim.rev); logline('<b>gear</b> reverse ' + (sim.rev ? 'ENGAGED' : 'released')); };
+        chipCamFault.onclick = function () { cam.fault = !cam.fault; this.classList.toggle('on', cam.fault); logline('<b>camera</b> ' + (cam.fault ? 'frames STOPPED' : 'frames resumed')); };
+
+        function updateSurfaces(now, r, stale) {
+            // reverse flag only trusted from a live frame; on stall keep the last known state
+            if (!stale && r.rev !== cam.rev) {
+                if (!r.rev) cam.holdUntil = now + kCamHoldMs;
+                cam.rev = r.rev;
+                if (cam.rev && activeTab === 'camera') { activeTab = 'carplay'; }   // preview ends; the car has the well now
+                if (cam.rev) { cam.manual = false; }
+            }
+            const holding = !cam.rev && now < cam.holdUntil;
+            const showCam = cam.rev || holding || cam.manual;
+            activeSurface = showCam ? 'camera' : activeTab;
+
+            camview.classList.toggle('show', showCam);
+            camview.classList.toggle('fault', cam.fault);
+            sheetSet.classList.toggle('show', activeSurface === 'settings');
+            Object.entries(TABS).forEach(([name, el]) => el.classList.toggle('on', name === activeSurface));
+            tabCam.classList.toggle('rev', cam.rev || holding);
+            camState.textContent = cam.rev ? 'Reverse' : holding ? 'Reverse · hold' : 'Preview';
+            camState.classList.toggle('rev', cam.rev || holding);
+            btnCamClose.hidden = cam.rev || holding;
+            geom.textContent = showCam
+                ? `camera ${LAYOUT.well.w} × ${LAYOUT.well.h} px  ·  UVC 1280×720 scaled, guides drawn locally`
+                : `carplay ${LAYOUT.well.w} × ${LAYOUT.well.h} px  ·  request this mode from the dongle`;
+        }
+
+        /* --------------------------------------------------------------- settings
+           User preferences live on the console. The target rootfs is read-only
+           (spec §5.6), so persistence needs a small writable data partition with
+           fsync on write — a spec addition. The sim uses localStorage. */
+        const DEFAULTS = { theme: 'dark', accent: '#FF6A2B', tempUnit: 'F', pressUnit: 'psi' };
+        const SWATCHES = [
+            ['Ember', '#FF6A2B'], ['Copper', '#E0894A'], ['Ice', '#38BDF8'], ['Teal', '#2DD4BF'], ['Mint', '#34D399'],
+            ['Indigo', '#6366F1'], ['Violet', '#A78BFA'], ['Rose', '#F472B6'], ['Silver', '#D4D4D8']
+        ];
+        const UNITS = {
+            press: {
+                psi: { unit: 'psi', min: 0, max: 80, major: 20, dp: 0, zone: [0, 12], f: v => v },
+                bar: { unit: 'bar', min: 0, max: 6, major: 1.5, dp: 1, zone: [0, 0.8], f: v => v * 0.0689476 }
+            },
+            temp: {
+                F: { unit: '°F', min: 100, max: 260, major: 40, dp: 0, zone: [235, 260], f: v => v },
+                C: { unit: '°C', min: 40, max: 120, major: 20, dp: 0, zone: [113, 120], f: v => (v - 32) * 5 / 9 }
+            }
+        };
+        const fmtPress = v => { const u = UNITS.press[settings.pressUnit]; return { n: u.f(v).toFixed(u.dp), u: u.unit }; };
+        const fmtTemp = v => { const u = UNITS.temp[settings.tempUnit]; return { n: u.f(v).toFixed(u.dp), u: u.unit }; };
+
+        let settings = { ...DEFAULTS };
+        try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('c3.settings') || '{}') }; } catch (e) { /* corrupt store → defaults */ }
+        function saveSettings() {
+            localStorage.setItem('c3.settings', JSON.stringify(settings));
+            logline('<b>settings</b> ' + JSON.stringify(settings));
+        }
+
+        // colour helpers
+        const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
+        const luminance = h => { const [r, g, b] = hexToRgb(h).map(c => c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4); return .2126 * r + .7152 * g + .0722 * b; };
+        function hexToHue(h) {
+            const [r, g, b] = hexToRgb(h), mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+            if (!d) return 0;
+            let hue = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+            return ((hue * 60) + 360) % 360;
+        }
+        function hslToHex(h, s, l) {
+            const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+            const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+            return '#' + [f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
+        }
+
+        function applyAccent(hex) {
+            const ink = luminance(hex) > 0.25 ? '#141210' : '#FFFFFF';   // dark text on bright accents, white on deep ones
+            document.documentElement.style.setProperty('--ember', hex);
+            document.documentElement.style.setProperty('--ember-ink', ink);
+            THEMES.dark.ember = THEMES.light.ember = hex;
+            [...swatches.children].forEach(b => b.classList.toggle('on', b.dataset.hex === hex.toUpperCase()));
+            const hue = Math.round(hexToHue(hex));
+            sHue.value = hue; vHue.textContent = hue + '°';
+            accentHex.textContent = hex.toUpperCase();
+        }
+        function setAccent(hex, persist = true) { settings.accent = hex.toUpperCase(); applyAccent(settings.accent); if (persist) saveSettings(); }
+
+        function applyThemeSetting() {
+            const eff = settings.theme === 'auto' ? (lamps.head ? 'dark' : 'light') : settings.theme;
+            setTheme(eff);
+            [...segTheme.children].forEach(b => b.classList.toggle('on', b.dataset.v === settings.theme));
+        }
+        function setThemePref(v) { settings.theme = v; saveSettings(); applyThemeSetting(); }
+
+        function applySettings() {
+            applyAccent(settings.accent);
+            applyThemeSetting();
+            const swName = (SWATCHES.find(([, h]) => h === settings.accent) || ['Custom'])[0];
+            nrTheme.textContent = settings.theme[0].toUpperCase() + settings.theme.slice(1) + (settings.theme === 'auto' ? ' · lamps' : '') + ' · ' + swName;
+            nrUnits.textContent = UNITS.temp[settings.tempUnit].unit + ' · ' + UNITS.press[settings.pressUnit].unit;
+            [...segTemp.children].forEach(b => b.classList.toggle('on', b.dataset.v === settings.tempUnit));
+            [...segPress.children].forEach(b => b.classList.toggle('on', b.dataset.v === settings.pressUnit));
+        }
+
+        // build controls
+        SWATCHES.forEach(([name, hex]) => {
+            const b = document.createElement('button');
+            b.className = 'sw'; b.style.background = hex; b.dataset.hex = hex; b.title = name; b.setAttribute('aria-label', name);
+            b.onclick = () => setAccent(hex);
+            swatches.appendChild(b);
+        });
+        sHue.addEventListener('input', () => setAccent(hslToHex(+sHue.value, .92, .58), false));
+        sHue.addEventListener('change', saveSettings);
+        function buildSeg(el, items, onPick) {
+            items.forEach(([v, label]) => {
+                const b = document.createElement('button'); b.dataset.v = v; b.textContent = label;
+                b.onclick = () => onPick(v);
+                el.appendChild(b);
+            });
+        }
+        buildSeg(segTheme, [['dark', 'Dark'], ['light', 'Light'], ['auto', 'Auto · lamps']], setThemePref);
+        buildSeg(segTemp, [['F', '°F'], ['C', '°C']], v => { settings.tempUnit = v; saveSettings(); applySettings(); });
+        buildSeg(segPress, [['psi', 'psi'], ['bar', 'bar']], v => { settings.pressUnit = v; saveSettings(); applySettings(); });
+        btnReset.onclick = () => { settings = { ...DEFAULTS }; saveSettings(); applySettings(); };
+
+        /* ------------------------------------------------------------ calibration
+           Sim of the hidden calibration screen (spec §9.2). Raw counts are back-computed
+           from the placeholder identity curves in config/calibration.json, because the
+           mock has no ADC. Capture stages a point (`cal add`); Save is enabled at 8 points
+           and stands in for `cal save`, which on the MCU activates the curve only after
+           NVS persistence succeeds. Nothing here changes how the gauges convert. */
+        const CAL = {
+            fuel: { raw: r => r.fuel * 32767, val: r => r.fuel, dp: 3 },
+            oil: { raw: r => r.oil / 80 * 32767, val: r => r.oil, dp: 1 },
+            clt: { raw: r => (r.clt - 100) / 160 * 32767, val: r => r.clt, dp: 1 },
+            volt: { raw: r => r.volt / 16 * 32767, val: r => r.volt, dp: 2 },
+        };
+        const calStaged = { fuel: 0, oil: 0, clt: 0, volt: 0 }, calSaved = { fuel: false, oil: false, clt: false, volt: false };
+        let calLatest = null;
+        function syncCal() {
+            Object.keys(CAL).forEach(ch => {
+                const n = calStaged[ch];
+                document.getElementById('calPts' + ch).textContent = calSaved[ch] ? '8 points · saved (sim)' : n ? n + ' staged · placeholder active' : '2 points · placeholder';
+                document.querySelector('.calSave[data-ch=' + ch + ']').disabled = n < 8;
+                document.getElementById('calSaveS' + ch).textContent = n >= 8 ? 'cal save' : 'needs ' + (8 - n) + ' more';
+            });
+            const done = Object.values(calSaved).filter(Boolean).length;
+            nrCal.textContent = done === 4 ? 'Measured · 4 channels (sim)' : 'Placeholder table · spec §9.2';
+            kvCal.textContent = done === 4 ? 'measured (sim)' : done ? done + '/4 measured' : 'placeholder';
+        }
+        document.querySelectorAll('.calAdd').forEach(b => b.onclick = () => {
+            const ch = b.dataset.ch; if (!calLatest) return;
+            calStaged[ch] = Math.min(24, calStaged[ch] + 1);
+            logline('<b>tx</b> {"cmd":"cal","ch":"' + ch + '","action":"add","raw":' + Math.round(CAL[ch].raw(calLatest)) + ',"value":' + CAL[ch].val(calLatest).toFixed(CAL[ch].dp) + '}');
+            syncCal();
+        });
+        document.querySelectorAll('.calSave').forEach(b => b.onclick = () => {
+            const ch = b.dataset.ch; if (calStaged[ch] < 8) return;
+            calSaved[ch] = true; calStaged[ch] = 0;
+            logline('<b>tx</b> {"cmd":"cal","ch":"' + ch + '","action":"save"}  →  {"ack":"cal","ok":true}');
+            syncCal();
+        });
+        syncCal();
+
+        /* ------------------------------------------------------------- main loop */
+        const ctxOil = document.getElementById('cOil').getContext('2d');
+        const ctxClt = document.getElementById('cClt').getContext('2d');
+        const ctxFuel = document.getElementById('cFuel').getContext('2d');
+        const tiles = { oil: tOil, clt: tClt, fuel: tFuel, volt: tVolt };
+        const hud = document.getElementById('hud');
+
+        function tileClass(el, st, severity) {
+            el.classList.toggle('stale', st === 'stale');
+            el.classList.toggle('warn', (st === 'open') || (st === 'warn' && severity === 'alarm'));
+            el.classList.toggle('caution', st === 'warn' && severity === 'caution');
+        }
+
+        let last = performance.now(), lastFrameAt = performance.now(), latest = readings();
+        let acc = 0, frames = 0, ft = 0;
+        function frame(now) {
+            const dt = Math.min(.05, (now - last) / 1000); last = now;
+            if (!sim.manual) stepModel(dt);
+
+            // "receive" a frame unless the link is stalled — the model keeps running,
+            // exactly as the MCU would while the Pi hears nothing
+            if (!sim.stall) { latest = readings(); lastFrameAt = now; }
+            const r = latest, age = now - lastFrameAt, stale = age > 1000;
+
+            // needle damping — mechanical lag, distinct from the value
+            const k = Math.min(1, dt * 7);
+            sim.nOil += (r.oil - sim.nOil) * k;
+            sim.nClt += (r.clt - sim.nClt) * k;
+            sim.nFuel += (r.fuel - sim.nFuel) * Math.min(1, dt * 2.5);
+            sim.nVolt += (r.volt - sim.nVolt) * k;
+
+            const has = f => r.faults.includes(f);
+            const PU = UNITS.press[settings.pressUnit], TU = UNITS.temp[settings.tempUnit];
+            const gOil = {
+                label: 'OIL PRESSURE', unit: PU.unit, min: PU.min, max: PU.max, major: PU.major, dp: PU.dp, zone: PU.zone,
+                value: PU.f(r.oil), needle: PU.f(sim.nOil), warn: has('OIL_LOW'), warnText: 'LOW — STOP ENGINE', severity: 'alarm',
+                open: r.openOil, stale
+            };
+            const gClt = {
+                label: 'COOLANT', unit: TU.unit, min: TU.min, max: TU.max, major: TU.major, dp: TU.dp, zone: TU.zone,
+                value: TU.f(r.clt), needle: TU.f(sim.nClt), warn: has('CLT_HIGH'), warnText: 'OVERHEAT', severity: 'alarm',
+                open: false, stale
+            };
+            const gFuel = {
+                label: 'FUEL', unit: '%', min: 0, max: 1, dp: 0, zone: [0, .08],
+                value: r.fuel * 100, needle: sim.nFuel, warn: has('FUEL_LOW'), warnText: 'LOW FUEL', severity: 'caution',
+                open: r.openFuel, stale,
+                marks: [{ v: 0, t: 'E' }, { v: .25, t: '¼' }, { v: .5, t: '½' }, { v: .75, t: '¾' }, { v: 1, t: 'F' }]
+            };
+            const gVolt = {
+                label: 'SYSTEM VOLTAGE', unit: 'V', min: 9, max: 16, dp: 1, band: [12.4, 15.2],
+                value: r.volt, needle: sim.nVolt, warn: has('VOLT_LOW') || has('VOLT_HIGH'),
+                warnText: has('VOLT_LOW') ? 'LOW · CHECK CHARGING' : 'HIGH · CHECK CHARGING', severity: 'caution',
+                open: false, stale,
+                marks: [{ v: 9, t: '9' }, { v: 11, t: '11' }, { v: 13, t: '13' }, { v: 15, t: '15' }]
+            };
+
+            arcGauge(ctxOil, gOil); arcGauge(ctxClt, gClt);
+            barGauge(ctxFuel, gFuel);
+            tileClass(tiles.oil, gaugeState(gOil), 'alarm');
+            tileClass(tiles.clt, gaugeState(gClt), 'alarm');
+            tileClass(tiles.fuel, gaugeState(gFuel), 'caution');
+            // voltage lives in the status bar; the tile is the systems-status card (v5). Only
+            // links the spec defines are shown: MCU (§4.3 stall) and CarPlay (dongle session).
+
+            renderAlerts(r, stale, age);
+            updateSurfaces(now, r, stale);
+            kvLink.textContent = stale ? 'lost' : '10 Hz · ok';
+            nrSystem.textContent = 'sim v6 · MCU ' + (stale ? 'link lost' : '10 Hz');
+            if (currentPage() === 'calibration') {
+                calLatest = stale ? null : r;
+                Object.entries(CAL).forEach(([ch, c]) => {
+                    document.getElementById('calRaw' + ch).textContent = stale ? '— —' : Math.round(c.raw(r)).toLocaleString();
+                    document.getElementById('calVal' + ch).textContent = stale ? '— —' : c.val(r).toFixed(c.dp);
+                });
+            }
+
+            // status bar
+            stVolt.textContent = stale ? '— —' : r.volt.toFixed(1);
+            dotMcu.className = 'dot' + (stale ? ' bad' : '');
+            const d = new Date();
+            const hh = d.getHours() % 12 || 12, mm = String(d.getMinutes()).padStart(2, '0');
+            stClock.textContent = hh + ':' + mm; stAmpm.textContent = d.getHours() >= 12 ? 'PM' : 'AM';
+            cpTime.textContent = hh + ':' + mm;
+
+            // drawer readouts
+            nOil.textContent = r.oil.toFixed(0) + ' psi';
+            nClt.textContent = r.clt.toFixed(0) + ' °F';
+            nFuel.textContent = (r.fuel * 100).toFixed(0) + ' %';
+            nVolt.textContent = r.volt.toFixed(1) + ' V';
+
+            frames++; acc += dt; ft = ft * .9 + (performance.now() - now) * .1;
+            if (acc > .5) {
+                hud.textContent = `${(frames / acc).toFixed(0)} fps · ${ft.toFixed(2)} ms/frame · ${LAYOUT.W}×${LAYOUT.H} (800×1280 @2x)`;
+                frames = 0; acc = 0;
+            }
+            requestAnimationFrame(frame);
+        }
+
+        /* ------------------------------------------------------------------ boot */
+        syncHvac();
+        fit();
+        syncAudio();
+        applySettings();
+        logline('<b>sim</b> tier 0 v4 started — profile WarmupDrive');
+        logline('<b>layout</b> well ' + LAYOUT.well.w + '×' + LAYOUT.well.h + ' @ ' + LAYOUT.well.x + ',' + LAYOUT.well.y);
+        const start = () => requestAnimationFrame(frame);
+        if (document.fonts && document.fonts.ready) {
+            Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]).then(start);
+        } else start();
+    </script>
+</body>
+
+</html>
