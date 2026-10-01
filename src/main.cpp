@@ -1,6 +1,6 @@
-#include <iostream>
+#include "logging/boot_message.hpp"
 
 int main() {
-  std::cout << "Hello, World!\n";
+  c3::logging::boot_message();
   return 0;
 }
