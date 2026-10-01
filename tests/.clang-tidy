@@ -1,0 +1,9 @@
+# Tests inherit the project config minus checks that Catch2 macros trip by design:
+# TEST_CASE registers a static object (cert-err58-cpp) and a TEST_CASE with SECTIONs
+# expands to one large function (readability-function-cognitive-complexity).
+InheritParentConfig: true
+Checks: >
+  -cert-err58-cpp,
+  -readability-function-cognitive-complexity,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-init-variables
