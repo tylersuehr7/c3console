@@ -1,0 +1,107 @@
+# C3 Console — clang-tidy. Run before finishing a milestone (AGENTS.md).
+#
+# Naming rules (AGENTS.md → Conventions):
+#   1. Types (class/struct/enum)      -> PascalCase        GaugeScene, Frame, LinkState
+#   2. Functions and methods          -> snake_case        begin_frame(), parse_args()
+#   3. Variables and parameters       -> snake_case        stall_timeout_ms
+#   4. Private/protected members      -> snake_case_       items_, size_
+#   5. Constants (constexpr/global/   -> kCamelCase        kMaxFaults, kExitOk
+#      class/static)
+#   Constants must be listed explicitly; otherwise they fall through to the
+#   snake_case VariableCase rule and get flagged.
+#
+# Running it. Apple's toolchain does not ship clang-tidy:
+#   brew install llvm
+#   cmake -B build -DC3_ENABLE_CLANG_TIDY=ON -DC3_CLANG_TIDY_EXE=/opt/homebrew/opt/llvm/bin/clang-tidy
+#   cmake --build build -j
+# or one-off:
+#   /opt/homebrew/opt/llvm/bin/clang-tidy -p build src/main.cpp src/app/*.cpp
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  concurrency-*,
+  cppcoreguidelines-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -bugprone-easily-swappable-parameters,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-pro-type-union-access,
+  -misc-non-private-member-variables-in-classes,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length,
+  -readability-magic-numbers
+
+WarningsAsErrors: ''
+# Project headers use .hpp (sources .cpp). 
+# Diagnose only our own headers under src/, not the system, NanoVG or SDL headers they pull in.
+HeaderFilterRegex: '(^|/)src/.*\.hpp$'
+FormatStyle: file
+
+CheckOptions:
+  # --- types -----------------------------------------------------------------
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypeAliasCase
+    value: CamelCase
+  - key: readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  # --- functions -------------------------------------------------------------
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+  - key: readability-identifier-naming.MethodCase
+    value: lower_case
+  # --- variables -------------------------------------------------------------
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
+  - key: readability-identifier-naming.LocalVariableCase
+    value: lower_case
+  - key: readability-identifier-naming.ParameterCase
+    value: lower_case
+  - key: readability-identifier-naming.MemberCase
+    value: lower_case
+  - key: readability-identifier-naming.PublicMemberSuffix
+    value: ''
+  - key: readability-identifier-naming.PrivateMemberCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMemberSuffix
+    value: '_'
+  - key: readability-identifier-naming.ProtectedMemberCase
+    value: lower_case
+  - key: readability-identifier-naming.ProtectedMemberSuffix
+    value: '_'
+  # --- constants: k-prefixed CamelCase -------------------------------------------
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConstexprVariablePrefix
+    value: 'k'
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalConstantPrefix
+    value: 'k'
+  - key: readability-identifier-naming.ClassConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.ClassConstantPrefix
+    value: 'k'
+  - key: readability-identifier-naming.StaticConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.StaticConstantPrefix
+    value: 'k'
+  # --- complexity ------------------------------------------------------------
+  - key: readability-function-cognitive-complexity.Threshold
+    value: 30

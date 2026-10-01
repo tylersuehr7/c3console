@@ -1,0 +1,23 @@
+BasedOnStyle: Google
+ColumnLimit: 120
+IndentWidth: 2
+AccessModifierOffset: -2
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+BreakBeforeBraces: Attach
+DerivePointerAlignment: false
+PointerAlignment: Left
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^"'
+    Priority: 1
+  - Regex: '^<(catch2|nanovg|SDL2|libusb|nlohmann)/'
+    Priority: 2
+  - Regex: '^<.*\.h>'
+    Priority: 3
+  - Regex: '^<'
+    Priority: 4
+SortIncludes: CaseSensitive
+NamespaceIndentation: None
+FixNamespaceComments: true
