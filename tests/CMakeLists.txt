@@ -20,7 +20,11 @@ add_executable(c3console_tests
     test_fixed_text.cpp
     test_fixed_vector.cpp
     test_flat_json.cpp
+    test_linear_curve.cpp
     test_log.cpp
+    test_spsc_queue.cpp
+    test_triple_buffer.cpp
+    test_unique_fd.cpp
     test_vehicle_commands.cpp
     test_vehicle_types.cpp)
 
