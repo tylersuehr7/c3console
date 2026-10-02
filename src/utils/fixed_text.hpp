@@ -5,6 +5,7 @@
 #include <array>
 #include <charconv>
 #include <concepts>
+#include <cstring>
 #include <string_view>
 
 namespace c3::utils {

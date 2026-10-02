@@ -1,7 +1,8 @@
-#include <array>
+#include "utils/fixed_format.hpp"
+
 #include <catch2/catch_test_macros.hpp>
 
-#include "utils/fixed_format.hpp"
+#include <array>
 
 using c3::utils::format_fixed;
 using c3::utils::format_into;
@@ -36,6 +37,61 @@ TEST_CASE("format_into: truncates safely and stays terminated", "[fixed_format]"
 TEST_CASE("format_into: composite", "[fixed_format]") {
   std::array<char, 8> buf{};
   CHECK(format_into(buf, "%d:%02d", 4, 7) == "4:07");
+}
+
+TEST_CASE("format_fixed: negative values round away from zero at the chosen precision", "[fixed_format]") {
+  std::array<char, 16> buf{};
+  CHECK(format_fixed(buf, -2.46, 1) == "-2.5");
+  CHECK(format_fixed(buf, -0.5, 0) == "-0");
+}
+
+TEST_CASE("format_fixed: more than one decimal", "[fixed_format]") {
+  std::array<char, 16> buf{};
+  CHECK(format_fixed(buf, 3.14159, 2) == "3.14");
+  CHECK(format_fixed(buf, 3.14159, 4) == "3.1416");
+}
+
+TEST_CASE("format_fixed: zero decimals rounds to a whole number", "[fixed_format]") {
+  std::array<char, 16> buf{};
+  CHECK(format_fixed(buf, 1234.56, 0) == "1235");
+  CHECK(format_fixed(buf, 0.0, 0) == "0");
+}
+
+TEST_CASE("format_fixed: truncates safely when the number does not fit", "[fixed_format]") {
+  std::array<char, 4> buf{};
+  const auto v = format_fixed(buf, 12345.678, 2);
+  CHECK(v == "123");
+  CHECK(buf[3] == '\0');
+}
+
+TEST_CASE("format_into: exact fit is not truncated and stays terminated", "[fixed_format]") {
+  std::array<char, 5> buf{};
+  const auto v = format_into(buf, "%s", "1234");
+  CHECK(v == "1234");
+  CHECK(v.size() == 4);
+  CHECK(buf[4] == '\0');
+}
+
+TEST_CASE("format_into: empty result yields an empty view and a terminated buffer", "[fixed_format]") {
+  std::array<char, 8> buf{};
+  buf.fill('#');
+  const auto v = format_into(buf, "%s", "");
+  CHECK(v.empty());
+  CHECK(buf[0] == '\0');
+}
+
+TEST_CASE("format_into: returned view aliases the buffer", "[fixed_format]") {
+  std::array<char, 8> buf{};
+  const auto v = format_into(buf, "%d", 42);
+  CHECK(v.data() == buf.data());
+  CHECK(v == "42");
+}
+
+TEST_CASE("format_into: minimum two-byte buffer holds one character", "[fixed_format]") {
+  std::array<char, 2> buf{};
+  const auto v = format_into(buf, "%s", "x");
+  CHECK(v == "x");
+  CHECK(buf[1] == '\0');
 }
 
 }  // namespace

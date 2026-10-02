@@ -1,7 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
-#include <string_view>
-
 #include "utils/fixed_text.hpp"
+
+#include <catch2/catch_test_macros.hpp>
+
+#include <string_view>
 
 namespace {
 
@@ -83,6 +84,92 @@ TEST_CASE("append: tests that appending too much data truncates it", "[FixedText
   text.append("1234567890ABCDEFGHIJ");
   CHECK(16 == text.size());
   CHECK("1234567890ABCDEF" == text.view());
+}
+
+TEST_CASE("append: tests that appending null C-String writes '(null)' instead of dereferencing", "[FixedText]") {
+  auto text = c3::utils::FixedText<16>();
+  const char* value = nullptr;
+  text.append(value);
+  CHECK("(null)" == text.view());
+}
+
+TEST_CASE("append: tests that appending negative int works", "[FixedText]") {
+  auto text = c3::utils::FixedText<16>();
+  int value = -17;
+  text.append(value);
+  CHECK("-17" == text.view());
+}
+
+TEST_CASE("append: tests that appending zero works", "[FixedText]") {
+  auto text = c3::utils::FixedText<16>();
+  int value = 0;
+  text.append(value);
+  CHECK("0" == text.view());
+}
+
+TEST_CASE("append: tests that successive appends concatenate in order", "[FixedText]") {
+  auto text = c3::utils::FixedText<32>();
+  text.append("blower=");
+  text.append(2);
+  text.append(' ');
+  text.append("ac=");
+  text.append(true);
+  CHECK("blower=2 ac=true" == text.view());
+  CHECK(16 == text.size());
+}
+
+TEST_CASE("append: tests that filling exactly to capacity keeps every character", "[FixedText]") {
+  auto text = c3::utils::FixedText<4>();
+  text.append("ABCD");
+  CHECK(4 == text.size());
+  CHECK("ABCD" == text.view());
+}
+
+TEST_CASE("append: tests that a later append truncates at the remaining capacity", "[FixedText]") {
+  auto text = c3::utils::FixedText<8>();
+  text.append("12345");
+  text.append("6789");
+  CHECK(8 == text.size());
+  CHECK("12345678" == text.view());
+}
+
+TEST_CASE("append: tests that appending to a full buffer is a no-op", "[FixedText]") {
+  auto text = c3::utils::FixedText<4>();
+  text.append("ABCD");
+  text.append("EFGH");
+  text.append('Z');
+  text.append(99);
+  text.append(true);
+  CHECK(4 == text.size());
+  CHECK("ABCD" == text.view());
+}
+
+TEST_CASE("append: tests that a number longer than the remaining capacity is truncated", "[FixedText]") {
+  auto text = c3::utils::FixedText<4>();
+  text.append(123456);
+  CHECK(4 == text.size());
+  CHECK("1234" == text.view());
+}
+
+TEST_CASE("reset: tests that appending after reset starts from the beginning", "[FixedText]") {
+  auto text = c3::utils::FixedText<16>();
+  text.append("first");
+  static_cast<void>(text.reset());
+  text.append("second");
+  CHECK(6 == text.size());
+  CHECK("second" == text.view());
+}
+
+TEST_CASE("reset: tests that reset on an empty buffer returns 0", "[FixedText]") {
+  auto text = c3::utils::FixedText<16>();
+  CHECK(0 == text.reset());
+  CHECK(0 == text.size());
+}
+
+TEST_CASE("view: tests that a fresh buffer is empty", "[FixedText]") {
+  const auto text = c3::utils::FixedText<16>();
+  CHECK(0 == text.size());
+  CHECK(text.view().empty());
 }
 
 }  // namespace
