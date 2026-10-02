@@ -32,12 +32,13 @@ add_subdirectory(third_party)
 # ---------------------------------------------------------------------------
 
 add_subdirectory(src/logging)  # logging: its own platform code so can live without depending on app.
+add_subdirectory(src/vehicle)  # vehicle: state/commands specific to C3; sits below telemetry and UI.
 
 # ---------------------------------------------------------------------------
 # Executable
 # ---------------------------------------------------------------------------
 add_executable(c3console src/main.cpp)
-target_link_libraries(c3console PRIVATE c3_warnings c3_log)
+target_link_libraries(c3console PRIVATE c3_warnings c3_log c3_vehicle)
 target_link_libraries(c3console PUBLIC nanovg)
 
 # ---------------------------------------------------------------------------

@@ -18,7 +18,9 @@ add_executable(c3console_tests
     test_main.cpp
     test_fixed_format.cpp
     test_fixed_text.cpp
+    test_flat_json.cpp
     test_log.cpp
+    test_vehicle_commands.cpp
     test_vehicle_types.cpp)
 
 # c3_app and c3_render carry hvac and telemetry publicly; listing them again duplicates the
