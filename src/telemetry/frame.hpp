@@ -18,13 +18,13 @@ constexpr std::size_t kChannelCount = static_cast<std::size_t>(Channel::Count);
 [[nodiscard]] constexpr std::string_view to_string(Channel channel) noexcept {
   switch (channel) {
     case Channel::Fuel:
-      return "fuel";
+      return "FUEL";
     case Channel::Oil:
-      return "oil";
+      return "OIL";
     case Channel::Coolant:
-      return "coolant";
+      return "COOLANT";
     case Channel::Volt:
-      return "volt";
+      return "VOLT";
   }
   return "?";
 }
