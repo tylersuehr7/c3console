@@ -25,6 +25,8 @@ constexpr std::size_t kChannelCount = static_cast<std::size_t>(Channel::Count);
       return "COOLANT";
     case Channel::Volt:
       return "VOLT";
+    case Channel::Count:
+      break;
   }
   return "?";
 }
@@ -58,6 +60,8 @@ constexpr std::size_t kFaultKindCount = static_cast<std::size_t>(FaultKind::Coun
       return "SENDER_OPEN";
     case FaultKind::SenderShort:
       return "SENDER_SHORT";
+    case FaultKind::Count:
+      break;
   }
   return "?";
 }
