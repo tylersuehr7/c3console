@@ -17,6 +17,7 @@ include(Catch)
 add_executable(c3console_tests
     test_main.cpp
     test_crc16.cpp
+    test_fault_codes.cpp
     test_fixed_format.cpp
     test_fixed_text.cpp
     test_fixed_vector.cpp
@@ -31,7 +32,7 @@ add_executable(c3console_tests
 
 # c3_app and c3_render carry hvac and telemetry publicly; listing them again duplicates the
 # archives on the link line.
-target_link_libraries(c3console_tests PRIVATE c3_vehicle c3_log c3_warnings Catch2::Catch2WithMain)
+target_link_libraries(c3console_tests PRIVATE c3_vehicle c3_telemetry c3_log c3_warnings Catch2::Catch2WithMain)
 
 # Tests that read shipped files (config/calibration.json) locate them from the source tree,
 # because ctest does not run them from the repository root.

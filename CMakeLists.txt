@@ -31,8 +31,9 @@ add_subdirectory(third_party)
 # First party libraries
 # ---------------------------------------------------------------------------
 
-add_subdirectory(src/logging)  # logging: its own platform code so can live without depending on app.
-add_subdirectory(src/vehicle)  # vehicle: state/commands specific to C3; sits below telemetry and UI.
+add_subdirectory(src/logging)    # platform logging; can live without depending on app.
+add_subdirectory(src/vehicle)    # Pi -> MCU. State, command codec, acknowlege parser; no I/O.
+add_subdirectory(src/telemetry)  # MCU -> Pi. Ingest framing, parsing, sources, calibration, I/O, etc.
 
 # ---------------------------------------------------------------------------
 # Executable
