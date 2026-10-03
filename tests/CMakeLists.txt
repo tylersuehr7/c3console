@@ -16,6 +16,7 @@ include(Catch)
 # layout arithmetic, touch transform.
 add_executable(c3console_tests
     test_main.cpp
+    test_crc16.cpp
     test_fixed_format.cpp
     test_fixed_text.cpp
     test_fixed_vector.cpp
