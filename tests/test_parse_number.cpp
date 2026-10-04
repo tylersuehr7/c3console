@@ -130,6 +130,16 @@ TEST_CASE("parse_float: rejects trailing characters", "[parse_number]") {
   CHECK(v == 7.0F);
 }
 
+TEST_CASE("parse_float: rejects leading whitespace that strtod would otherwise skip", "[parse_number]") {
+  float v = 7.0F;
+  CHECK_FALSE(parse_float(" 1.5", v));
+  CHECK_FALSE(parse_float("\t1.5", v));
+  CHECK_FALSE(parse_float("\n1.5", v));
+  CHECK_FALSE(parse_float("\r1.5", v));
+  CHECK_FALSE(parse_float("  1", v));
+  CHECK(v == 7.0F);
+}
+
 TEST_CASE("parse_float: rejects non-numeric text", "[parse_number]") {
   float v = 7.0F;
   CHECK_FALSE(parse_float("abc", v));

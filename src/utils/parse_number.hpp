@@ -17,7 +17,8 @@ namespace c3::utils {
 /// Parses a decimal or scientific-notation float token.
 ///
 /// NaN, infinity and magnitudes beyond float range are rejected: a value that cannot be drawn
-/// on a gauge is corrupt data, not a number. `out` is written only on success.
+/// on a gauge is corrupt data, not a number. Whitespace is rejected on both ends. `out` is
+/// written only on success.
 ///
 /// @param tok the whole token; must be shorter than 32 characters
 /// @param out receives the value
@@ -25,6 +26,12 @@ namespace c3::utils {
 [[nodiscard]] inline bool parse_float(std::string_view tok, float& out) noexcept {
   std::array<char, 32> buf{};  // strtod needs a terminator; tokens are short
   if (tok.empty() || tok.size() >= buf.size()) {
+    return false;
+  }
+
+  // strtod skips leading whitespace; a whole-token parser must not.
+  if (tok.front() == ' ' || tok.front() == '\t' || tok.front() == '\n' || tok.front() == '\r' || tok.front() == '\f' ||
+      tok.front() == '\v') {
     return false;
   }
 
