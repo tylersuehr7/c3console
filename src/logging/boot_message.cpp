@@ -26,6 +26,8 @@ constexpr std::string_view kBannerArt = R"(
 )";
 }  // namespace
 
-void boot_message() noexcept { static_cast<void>(std::fwrite(kBannerArt.data(), 1, kBannerArt.size(), stderr)); }
+void boot_message() noexcept {
+  static_cast<void>(std::fwrite(kBannerArt.data(), 1, kBannerArt.size(), stderr));
+}
 
 }  // namespace c3::logging

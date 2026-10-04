@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "telemetry/crc16.hpp"
+
+#include <catch2/catch_test_macros.hpp>
 
 using c3::telemetry::Crc16Ccitt;
 

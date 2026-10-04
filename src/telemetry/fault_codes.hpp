@@ -1,11 +1,11 @@
 #pragma once
 
+#include "frame.hpp"
+
 #include <cstddef>
 #include <optional>
 #include <span>
 #include <string_view>
-
-#include "frame.hpp"
 
 namespace c3::telemetry {
 

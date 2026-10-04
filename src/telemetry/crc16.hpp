@@ -13,7 +13,7 @@
 namespace c3::telemetry {
 
 class Crc16Ccitt {
- public:
+public:
   static constexpr std::uint16_t kInit = 0xFFFF;
   static constexpr std::uint16_t kPoly = 0x1021;
 
@@ -42,7 +42,7 @@ class Crc16Ccitt {
     return c.value();
   }
 
- private:
+private:
   std::uint16_t crc_ = kInit;
 };
 

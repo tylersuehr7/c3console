@@ -67,7 +67,7 @@ struct Sink {
 [[nodiscard]] Sink set_sink(Sink sink) noexcept;
 
 class ScopedSink {
- public:
+public:
   explicit ScopedSink(Sink sink) noexcept : previous_(set_sink(sink)) {}
   ~ScopedSink() { static_cast<void>(set_sink(previous_)); }
   ScopedSink(const ScopedSink&) = delete;
@@ -75,7 +75,7 @@ class ScopedSink {
   ScopedSink(ScopedSink&&) = delete;
   ScopedSink& operator=(ScopedSink&&) = delete;
 
- private:
+private:
   Sink previous_;
 };
 

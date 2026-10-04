@@ -1,9 +1,9 @@
 #include "log.hpp"
 
+#include "utils/fixed_text.hpp"
+
 #include <atomic>
 #include <cstdio>
-
-#include "utils/fixed_text.hpp"
 
 namespace c3::logging {
 
@@ -19,9 +19,13 @@ Sink& sink_storage() noexcept {
 }
 }  // namespace
 
-void set_level(Level level) noexcept { level_storage().store(level, std::memory_order_relaxed); }
+void set_level(Level level) noexcept {
+  level_storage().store(level, std::memory_order_relaxed);
+}
 
-[[nodiscard]] Level get_level() noexcept { return level_storage().load(std::memory_order_relaxed); }
+[[nodiscard]] Level get_level() noexcept {
+  return level_storage().load(std::memory_order_relaxed);
+}
 
 [[nodiscard]] Sink set_sink(Sink sink) noexcept {
   const auto previous = sink_storage();
@@ -34,7 +38,7 @@ bool write(Level level, std::string_view tag, std::string_view message) noexcept
     return false;
   }
 
-  const char *ascii_color = to_ascii_color(level);
+  const char* ascii_color = to_ascii_color(level);
 
   auto text = utils::FixedText<1024>();
   text.append(to_priority_prefix(level));

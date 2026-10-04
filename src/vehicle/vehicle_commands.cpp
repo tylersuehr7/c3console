@@ -1,9 +1,9 @@
 #include "vehicle_commands.hpp"
 
-#include <array>
-
 #include "utils/fixed_format.hpp"
 #include "utils/flat_json.hpp"
+
+#include <array>
 
 namespace c3::vehicle {
 

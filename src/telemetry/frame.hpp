@@ -1,13 +1,13 @@
 #pragma once
 
+#include "utils/fixed_vector.hpp"
+#include "vehicle/vehicle_types.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string_view>
-
-#include "utils/fixed_vector.hpp"
-#include "vehicle/vehicle_types.hpp"
 
 namespace c3::telemetry {
 

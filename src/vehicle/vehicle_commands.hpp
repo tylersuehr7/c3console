@@ -7,12 +7,12 @@
 // so it cannot drift from reality (MCU holds state on comms loss, not us).
 #pragma once
 
+#include "vehicle_types.hpp"
+
 #include <cstdint>
 #include <optional>
 #include <span>
 #include <string_view>
-
-#include "vehicle_types.hpp"
 
 namespace c3::vehicle {
 
@@ -32,7 +32,7 @@ enum class SubmitResult : std::uint8_t { Accepted = 0, Busy, Unavailable, Invali
 enum class CommandStatus : std::uint8_t { Idle = 0, Pending, Acknowledged, Confirmed, Rejected, TimedOut, Unavailable };
 
 class CommandSink {
- public:
+public:
   virtual ~CommandSink() = default;
   CommandSink(const CommandSink&) = delete;
   CommandSink& operator=(const CommandSink&) = delete;
@@ -42,7 +42,7 @@ class CommandSink {
   [[nodiscard]] virtual SubmitResult send_lamp(const LampState& state) noexcept = 0;
   [[nodiscard]] virtual CommandStatus status(CommandKind kind) const noexcept = 0;
 
- protected:
+protected:
   CommandSink() = default;
 };
 
