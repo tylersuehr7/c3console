@@ -17,6 +17,8 @@ include(Catch)
 add_executable(c3console_tests
     test_main.cpp
     test_crc16.cpp
+    test_csv_codec.cpp
+    test_csv_recorder.cpp
     test_fault_codes.cpp
     test_fixed_format.cpp
     test_fixed_text.cpp
