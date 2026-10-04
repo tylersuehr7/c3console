@@ -75,8 +75,8 @@ TEST_CASE("parse_channel: recognises every channel name", "[fault_codes]") {
   CHECK(*parse_channel("FUEL") == Channel::Fuel);
   REQUIRE(parse_channel("OIL").has_value());
   CHECK(*parse_channel("OIL") == Channel::Oil);
-  REQUIRE(parse_channel("COOLANT").has_value());
-  CHECK(*parse_channel("COOLANT") == Channel::Coolant);
+  REQUIRE(parse_channel("CLT").has_value());
+  CHECK(*parse_channel("CLT") == Channel::Coolant);
   REQUIRE(parse_channel("VOLT").has_value());
   CHECK(*parse_channel("VOLT") == Channel::Volt);
 }
@@ -137,7 +137,7 @@ TEST_CASE("parse_fault_code: parses SENDER_OPEN with every channel", "[fault_cod
   constexpr std::array<Case, 4> cases{{
       {"SENDER_OPEN_FUEL", Channel::Fuel},
       {"SENDER_OPEN_OIL", Channel::Oil},
-      {"SENDER_OPEN_COOLANT", Channel::Coolant},
+      {"SENDER_OPEN_CLT", Channel::Coolant},
       {"SENDER_OPEN_VOLT", Channel::Volt},
   }};
   for (const auto& c : cases) {
@@ -156,7 +156,7 @@ TEST_CASE("parse_fault_code: parses SENDER_SHORT with every channel", "[fault_co
   constexpr std::array<Case, 4> cases{{
       {"SENDER_SHORT_FUEL", Channel::Fuel},
       {"SENDER_SHORT_OIL", Channel::Oil},
-      {"SENDER_SHORT_COOLANT", Channel::Coolant},
+      {"SENDER_SHORT_CLT", Channel::Coolant},
       {"SENDER_SHORT_VOLT", Channel::Volt},
   }};
   for (const auto& c : cases) {
@@ -227,7 +227,7 @@ TEST_CASE("parse_fault_code: rejects the Count sentinels and their fallbacks", "
 TEST_CASE("parse_fault_code: a bare channel name is not a fault", "[fault_codes]") {
   CHECK_FALSE(parse_fault_code("FUEL").has_value());
   CHECK_FALSE(parse_fault_code("VOLT").has_value());
-  CHECK_FALSE(parse_fault_code("COOLANT").has_value());
+  CHECK_FALSE(parse_fault_code("CLT").has_value());
 }
 
 // ---------------------------------------------------------------------------
@@ -247,7 +247,7 @@ TEST_CASE("format_fault_code: writes SENDER_OPEN with the channel suffix", "[fau
   CodeBuffer buffer{};
   CHECK(format(Fault{.kind = FaultKind::SenderOpen, .channel = Channel::Fuel}, buffer) == "SENDER_OPEN_FUEL");
   CHECK(format(Fault{.kind = FaultKind::SenderOpen, .channel = Channel::Oil}, buffer) == "SENDER_OPEN_OIL");
-  CHECK(format(Fault{.kind = FaultKind::SenderOpen, .channel = Channel::Coolant}, buffer) == "SENDER_OPEN_COOLANT");
+  CHECK(format(Fault{.kind = FaultKind::SenderOpen, .channel = Channel::Coolant}, buffer) == "SENDER_OPEN_CLT");
   CHECK(format(Fault{.kind = FaultKind::SenderOpen, .channel = Channel::Volt}, buffer) == "SENDER_OPEN_VOLT");
 }
 
@@ -255,7 +255,7 @@ TEST_CASE("format_fault_code: writes SENDER_SHORT with the channel suffix", "[fa
   CodeBuffer buffer{};
   CHECK(format(Fault{.kind = FaultKind::SenderShort, .channel = Channel::Fuel}, buffer) == "SENDER_SHORT_FUEL");
   CHECK(format(Fault{.kind = FaultKind::SenderShort, .channel = Channel::Oil}, buffer) == "SENDER_SHORT_OIL");
-  CHECK(format(Fault{.kind = FaultKind::SenderShort, .channel = Channel::Coolant}, buffer) == "SENDER_SHORT_COOLANT");
+  CHECK(format(Fault{.kind = FaultKind::SenderShort, .channel = Channel::Coolant}, buffer) == "SENDER_SHORT_CLT");
   CHECK(format(Fault{.kind = FaultKind::SenderShort, .channel = Channel::Volt}, buffer) == "SENDER_SHORT_VOLT");
 }
 
@@ -375,10 +375,9 @@ TEST_CASE("round trip: format then parse recovers every sender fault and channel
 
 TEST_CASE("round trip: parse then format reproduces the wire text exactly", "[fault_codes]") {
   constexpr std::array<std::string_view, 13> codes{
-      "OIL_LOW",           "CLT_HIGH",          "FUEL_LOW",         "VOLT_LOW",
-      "VOLT_HIGH",         "SENDER_OPEN_FUEL",  "SENDER_OPEN_OIL",  "SENDER_OPEN_COOLANT",
-      "SENDER_OPEN_VOLT",  "SENDER_SHORT_FUEL", "SENDER_SHORT_OIL", "SENDER_SHORT_COOLANT",
-      "SENDER_SHORT_VOLT",
+      "OIL_LOW",          "CLT_HIGH",         "FUEL_LOW",          "VOLT_LOW",         "VOLT_HIGH",
+      "SENDER_OPEN_FUEL", "SENDER_OPEN_OIL",  "SENDER_OPEN_CLT",   "SENDER_OPEN_VOLT", "SENDER_SHORT_FUEL",
+      "SENDER_SHORT_OIL", "SENDER_SHORT_CLT", "SENDER_SHORT_VOLT",
   };
   CodeBuffer buffer{};
   for (const auto code : codes) {

@@ -14,8 +14,8 @@ namespace c3::telemetry {
   return kind == FaultKind::SenderOpen || kind == FaultKind::SenderShort;
 }
 
-/// "SENDER_SHORT_COOLANT" is the longest fault code.
-constexpr std::size_t kMaxFaultCodeLength = 20;
+/// "SENDER_SHORT_FUEL" and "SENDER_SHORT_VOLT" are the longest fault codes.
+constexpr std::size_t kMaxFaultCodeLength = 17;
 
 [[nodiscard]] std::optional<Channel> parse_channel(std::string_view text) noexcept;
 

@@ -22,7 +22,7 @@ constexpr std::size_t kChannelCount = static_cast<std::size_t>(Channel::Count);
     case Channel::Oil:
       return "OIL";
     case Channel::Coolant:
-      return "COOLANT";
+      return "CLT";
     case Channel::Volt:
       return "VOLT";
     case Channel::Count:
