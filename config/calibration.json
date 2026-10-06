@@ -1,0 +1,31 @@
+{
+    "placeholder": true,
+    "format": 1,
+    "_comment": "PLACEHOLDER. Identity-shaped lines spanning each channel's plausibility limits (src/telemetry/limits.hpp). Not calibrated. Replace with bench sweeps per spec 9.2; the console refuses placeholder=false until every channel has at least 8 points.",
+    "channels": {
+        "fuel": {
+            "points": [
+                { "raw": 0, "value": 0.0 },
+                { "raw": 32767, "value": 1.0 }
+            ]
+        },
+        "oil": {
+            "points": [
+                { "raw": 0, "value": 0.0 },
+                { "raw": 32767, "value": 200.0 }
+            ]
+        },
+        "clt": {
+            "points": [
+                { "raw": 0, "value": -40.0 },
+                { "raw": 32767, "value": 400.0 }
+            ]
+        },
+        "volt": {
+            "points": [
+                { "raw": 0, "value": 0.0 },
+                { "raw": 32767, "value": 40.0 }
+            ]
+        }
+    }
+}
