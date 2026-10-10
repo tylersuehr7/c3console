@@ -6,6 +6,7 @@ set(SOURCES
     csv_recorder.cpp
     calibration.cpp
     mock_source.cpp
+    uart_source.cpp
 )
 add_library(c3_telemetry STATIC ${SOURCES})
 target_include_directories(c3_telemetry PUBLIC ../)

@@ -33,6 +33,7 @@ add_executable(c3console_tests
     test_replay_source.cpp
     test_spsc_queue.cpp
     test_triple_buffer.cpp
+    test_uart_source.cpp
     test_unique_fd.cpp
     test_vehicle_commands.cpp
     test_vehicle_types.cpp)
