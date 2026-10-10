@@ -30,6 +30,7 @@ add_executable(c3console_tests
     test_log.cpp
     test_parse_number.cpp
     test_protocol.cpp
+    test_replay_source.cpp
     test_spsc_queue.cpp
     test_triple_buffer.cpp
     test_unique_fd.cpp

@@ -1,6 +1,7 @@
 set(SOURCES
     fault_codes.cpp
     protocol.cpp
+    replay_source.cpp
     csv_codec.cpp
     csv_recorder.cpp
     calibration.cpp
