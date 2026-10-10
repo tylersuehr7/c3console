@@ -16,6 +16,7 @@ include(Catch)
 # layout arithmetic, touch transform.
 add_executable(c3console_tests
     test_main.cpp
+    test_mock_source.cpp
     test_calibration.cpp
     test_crc16.cpp
     test_csv_codec.cpp

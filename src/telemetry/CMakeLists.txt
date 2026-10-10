@@ -4,6 +4,7 @@ set(SOURCES
     csv_codec.cpp
     csv_recorder.cpp
     calibration.cpp
+    mock_source.cpp
 )
 add_library(c3_telemetry STATIC ${SOURCES})
 target_include_directories(c3_telemetry PUBLIC ../)
