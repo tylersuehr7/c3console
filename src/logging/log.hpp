@@ -116,17 +116,17 @@ constexpr void debug_va(std::string_view tag, Args&&... args) noexcept {
 }
 
 template <typename... Args>
-constexpr void info(std::string_view tag, Args&&... args) noexcept {
+constexpr void info_va(std::string_view tag, Args&&... args) noexcept {
   emit(Level::Info, tag, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
-constexpr void warn(std::string_view tag, Args&&... args) noexcept {
+constexpr void warn_va(std::string_view tag, Args&&... args) noexcept {
   emit(Level::Warn, tag, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
-constexpr void error(std::string_view tag, Args&&... args) noexcept {
+constexpr void error_va(std::string_view tag, Args&&... args) noexcept {
   emit(Level::Error, tag, std::forward<Args>(args)...);
 }
 
