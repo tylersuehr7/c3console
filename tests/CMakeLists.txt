@@ -22,6 +22,7 @@ add_executable(c3console_tests
     test_csv_codec.cpp
     test_csv_recorder.cpp
     test_fault_codes.cpp
+    test_file_watchdog.cpp
     test_fixed_format.cpp
     test_fixed_text.cpp
     test_fixed_vector.cpp
@@ -39,8 +40,10 @@ add_executable(c3console_tests
     test_vehicle_types.cpp)
 
 # c3_app and c3_render carry hvac and telemetry publicly; listing them again duplicates the
-# archives on the link line.
-target_link_libraries(c3console_tests PRIVATE c3_vehicle c3_telemetry c3_log c3_warnings Catch2::Catch2WithMain)
+# archives on the link line. Only the backend-neutral part of the platform module is linked:
+# c3_platform_desktop / c3_platform_drm pull in SDL2 or KMS, which the unit tests never touch.
+target_link_libraries(c3console_tests PRIVATE c3_vehicle c3_telemetry c3_platform_common c3_log c3_warnings
+                                              Catch2::Catch2WithMain)
 
 # Tests that read shipped files (config/calibration.json) locate them from the source tree,
 # because ctest does not run them from the repository root.
