@@ -27,7 +27,8 @@ if(C3_BACKEND STREQUAL "drm")
 
     add_library(c3_platform_drm STATIC
         nvg_gles2.c
-        drm_display_backend.cpp)
+        drm_display_backend.cpp
+        libinput_input_source.cpp)
 
     target_include_directories(c3_platform_drm PUBLIC ../)
     target_link_libraries(c3_platform_drm PUBLIC PkgConfig::C3_DRM nanovg c3_warnings c3_log)

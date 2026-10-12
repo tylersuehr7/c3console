@@ -61,7 +61,8 @@ endif()
 
 if(C3_BACKEND STREQUAL "drm")
     target_sources(c3console_tests PRIVATE
-        test_drm_display_backend.cpp)
+        test_drm_display_backend.cpp
+        test_libinput_input_source.cpp)
     target_link_libraries(c3console_tests PRIVATE c3_platform_drm)
 endif()
 
