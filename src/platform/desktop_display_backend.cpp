@@ -47,21 +47,21 @@ Size fit_window_to_display(Size panel, float fraction) noexcept {
 
 }  // namespace
 
-void DesktopBackend::WindowDeleter::operator()(SDL_Window* window) const noexcept {
+void DesktopDisplayBackend::WindowDeleter::operator()(SDL_Window* window) const noexcept {
   SDL_DestroyWindow(window);
 }
 
-void DesktopBackend::GlContextDeleter::operator()(void* ctx) const noexcept {
+void DesktopDisplayBackend::GlContextDeleter::operator()(void* ctx) const noexcept {
   SDL_GL_DeleteContext(ctx);
 }
 
-void DesktopBackend::NvgDeleter::operator()(NVGcontext* ctx) const noexcept {
+void DesktopDisplayBackend::NvgDeleter::operator()(NVGcontext* ctx) const noexcept {
   nvgDeleteGL3(ctx);
 }
 
-DesktopBackend::DesktopBackend(Size panel, float dpi) noexcept : panel_(panel), dpi_(dpi) {}
+DesktopDisplayBackend::DesktopDisplayBackend(Size panel, float dpi) noexcept : panel_(panel), dpi_(dpi) {}
 
-DesktopBackend::~DesktopBackend() {
+DesktopDisplayBackend::~DesktopDisplayBackend() {
   // Members release in reverse order: NanoVG needs the GL context current, so drop it
   // first while the context still exists, then the context, then the window.
   nvg_.reset();
@@ -72,12 +72,12 @@ DesktopBackend::~DesktopBackend() {
   }
 }
 
-DesktopBackend::Result DesktopBackend::create(const Options& options) {
+DesktopDisplayBackend::Result DesktopDisplayBackend::create(const Options& options) {
   if (options.panel.width <= 0 || options.panel.height <= 0) {
     return {nullptr, "panel size must be positive"};
   }
 
-  std::unique_ptr<DesktopBackend> b(new DesktopBackend(options.panel, options.dpi));
+  std::unique_ptr<DesktopDisplayBackend> b(new DesktopDisplayBackend(options.panel, options.dpi));
 
   if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
     return {nullptr, std::string("SDL_Init: ") + SDL_GetError()};
@@ -126,14 +126,14 @@ DesktopBackend::Result DesktopBackend::create(const Options& options) {
   return {std::move(b), {}};
 }
 
-void DesktopBackend::refresh_viewport() noexcept {
+void DesktopDisplayBackend::refresh_viewport() noexcept {
   int dw = 0, dh = 0, ww = 0, wh = 0;
   SDL_GL_GetDrawableSize(window_.get(), &dw, &dh);
   SDL_GetWindowSize(window_.get(), &ww, &wh);
   viewport_ = fit_panel(panel_, dw, dh, ww, wh);
 }
 
-NVGcontext* DesktopBackend::begin_frame() noexcept {
+NVGcontext* DesktopDisplayBackend::begin_frame() noexcept {
   if (in_frame_ || !nvg_) {
     return nullptr;
   }
@@ -155,7 +155,7 @@ NVGcontext* DesktopBackend::begin_frame() noexcept {
   return nvg_.get();
 }
 
-PresentResult DesktopBackend::end_frame() noexcept {
+PresentResult DesktopDisplayBackend::end_frame() noexcept {
   if (!in_frame_) {
     return PresentResult::Failed;
   }
@@ -171,7 +171,7 @@ PresentResult DesktopBackend::end_frame() noexcept {
   return PresentResult::Presented;
 }
 
-bool DesktopBackend::request_capture(std::string_view ppm_path) noexcept {
+bool DesktopDisplayBackend::request_capture(std::string_view ppm_path) noexcept {
   if (capture_pending_ || ppm_path.empty() || ppm_path.size() > kMaxCapturePath) {
     return false;
   }
@@ -183,7 +183,7 @@ bool DesktopBackend::request_capture(std::string_view ppm_path) noexcept {
 
 // Reads the back buffer (the frame just drawn, before swap) and writes a binary PPM.
 // Development path: allocates, touches the filesystem, and is never hit in steady state.
-void DesktopBackend::write_capture() noexcept {
+void DesktopDisplayBackend::write_capture() noexcept {
   capture_pending_ = false;
   const int w = viewport_.drawable_w;
   const int h = viewport_.drawable_h;

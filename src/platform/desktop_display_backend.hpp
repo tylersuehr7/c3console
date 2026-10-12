@@ -21,7 +21,7 @@ struct NVGcontext;
 
 namespace c3::platform {
 
-class DesktopBackend final : public DisplayBackend, public DebugFrameCapture {
+class DesktopDisplayBackend final : public DisplayBackend, public DebugFrameCapture {
 public:
   struct Options {
     Size panel{.width = 1600, .height = 2560};  // 800x1280 panel drawn at 2x
@@ -31,7 +31,7 @@ public:
   };
 
   struct Result {
-    std::unique_ptr<DesktopBackend> backend;  // null when `error` is set
+    std::unique_ptr<DesktopDisplayBackend> backend;  // null when `error` is set
     std::string error;
   };
 
@@ -39,11 +39,11 @@ public:
   /// context. Init-time; may allocate. Failure is a message, never an exception.
   [[nodiscard]] static Result create(const Options& options);
 
-  ~DesktopBackend() override;
-  DesktopBackend(const DesktopBackend&) = delete;
-  DesktopBackend& operator=(const DesktopBackend&) = delete;
-  DesktopBackend(DesktopBackend&&) = delete;
-  DesktopBackend& operator=(DesktopBackend&&) = delete;
+  ~DesktopDisplayBackend() override;
+  DesktopDisplayBackend(const DesktopDisplayBackend&) = delete;
+  DesktopDisplayBackend& operator=(const DesktopDisplayBackend&) = delete;
+  DesktopDisplayBackend(DesktopDisplayBackend&&) = delete;
+  DesktopDisplayBackend& operator=(DesktopDisplayBackend&&) = delete;
 
   [[nodiscard]] Size size() const noexcept override { return panel_; }
   [[nodiscard]] float dpi() const noexcept override { return dpi_; }
@@ -51,9 +51,7 @@ public:
   [[nodiscard]] NVGcontext* begin_frame() noexcept override;
   [[nodiscard]] PresentResult end_frame() noexcept override;
   [[nodiscard]] bool request_capture(std::string_view ppm_path) noexcept override;
-
-  /// Current fit of the panel into the window. Refreshed each begin_frame().
-  [[nodiscard]] const PanelViewport viewport() const noexcept { return viewport_; }
+  [[nodiscard]] PanelViewport viewport() const noexcept { return viewport_; }
   [[nodiscard]] SDL_Window* window() const noexcept { return window_.get(); }
 
 private:  // RAII for NanoVG pointers
@@ -68,7 +66,7 @@ private:  // RAII for NanoVG pointers
   };
 
 private:
-  DesktopBackend(Size panel, float dpi) noexcept;
+  DesktopDisplayBackend(Size panel, float dpi) noexcept;
   void refresh_viewport() noexcept;
   void write_capture() noexcept;
 

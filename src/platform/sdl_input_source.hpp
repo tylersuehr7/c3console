@@ -17,7 +17,7 @@ namespace c3::platform {
 
 class SdlInputSource : public InputSource {
 public:
-  explicit SdlInputSource(const DesktopBackend& backend) noexcept : backend_(backend) {}
+  explicit SdlInputSource(const DesktopDisplayBackend& backend) noexcept : backend_(backend) {}
 
   [[nodiscard]] bool poll(TouchEvent& out) noexcept override;
   [[nodiscard]] bool quit_requested() const noexcept override { return quit_; }
@@ -28,7 +28,7 @@ private:
   [[nodiscard]] std::optional<TouchEvent> map(TouchPhase phase, std::int32_t id, float wx, float wy) noexcept;
 
 private:
-  const DesktopBackend& backend_;
+  const DesktopDisplayBackend& backend_;
   bool quit_ = false;
   PanelTouchContact contact_;
 };

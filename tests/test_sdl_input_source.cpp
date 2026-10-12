@@ -17,7 +17,7 @@
 #include <type_traits>
 #include <vector>
 
-using c3::platform::DesktopBackend;
+using c3::platform::DesktopDisplayBackend;
 using c3::platform::InputSource;
 using c3::platform::PanelPoint;
 using c3::platform::PanelViewport;
@@ -53,7 +53,7 @@ void discard_log(void* /*context*/, std::string_view /*line*/) noexcept {}
 /// A backend, its log silencer, and an input source reading from it.
 struct Rig {
   std::unique_ptr<c3::logging::ScopedSink> quiet;
-  std::unique_ptr<DesktopBackend> backend;
+  std::unique_ptr<DesktopDisplayBackend> backend;
   std::unique_ptr<SdlInputSource> input;
 
   [[nodiscard]] PanelViewport viewport() const noexcept {
@@ -122,8 +122,8 @@ struct Rig {
 
 [[nodiscard]] Rig rig_or_skip() {
   Rig rig{.quiet = std::make_unique<c3::logging::ScopedSink>(quiet_sink()), .backend = nullptr, .input = nullptr};
-  auto result = DesktopBackend::create(
-      DesktopBackend::Options{.panel = kPanel, .dpi = 264.0F, .fit_fraction = 0.25F, .title = "c3console input test"});
+  auto result = DesktopDisplayBackend::create(DesktopDisplayBackend::Options{
+      .panel = kPanel, .dpi = 264.0F, .fit_fraction = 0.25F, .title = "c3console input test"});
   if (!result.backend) {
     if (result.error.rfind("SDL_", 0) == 0) {
       SKIP("no display available: " << result.error);

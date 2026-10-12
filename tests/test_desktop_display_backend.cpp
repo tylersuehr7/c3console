@@ -29,7 +29,7 @@
 #include <type_traits>
 
 using c3::platform::DebugFrameCapture;
-using c3::platform::DesktopBackend;
+using c3::platform::DesktopDisplayBackend;
 using c3::platform::DisplayBackend;
 using c3::platform::fit_panel;
 using c3::platform::PanelViewport;
@@ -48,8 +48,9 @@ namespace {
 
 constexpr Size kPanel{.width = 400, .height = 640};
 
-[[nodiscard]] DesktopBackend::Options small_options() {
-  return DesktopBackend::Options{.panel = kPanel, .dpi = 264.0F, .fit_fraction = 0.25F, .title = "c3console test"};
+[[nodiscard]] DesktopDisplayBackend::Options small_options() {
+  return DesktopDisplayBackend::Options{
+      .panel = kPanel, .dpi = 264.0F, .fit_fraction = 0.25F, .title = "c3console test"};
 }
 
 /// The backend logs through the project logger on create and on capture; keep that out of the
@@ -63,14 +64,14 @@ void discard_log(void* /*context*/, std::string_view /*line*/) noexcept {}
 /// A created backend together with the log silencer that must outlive it.
 struct Opened {
   std::unique_ptr<c3::logging::ScopedSink> quiet;  // heap-held so Opened stays movable
-  std::unique_ptr<DesktopBackend> backend;
-  [[nodiscard]] DesktopBackend* operator->() const noexcept { return backend.get(); }
-  [[nodiscard]] DesktopBackend& operator*() const noexcept { return *backend; }
+  std::unique_ptr<DesktopDisplayBackend> backend;
+  [[nodiscard]] DesktopDisplayBackend* operator->() const noexcept { return backend.get(); }
+  [[nodiscard]] DesktopDisplayBackend& operator*() const noexcept { return *backend; }
 };
 
-[[nodiscard]] Opened create_or_skip(const DesktopBackend::Options& options) {
+[[nodiscard]] Opened create_or_skip(const DesktopDisplayBackend::Options& options) {
   Opened opened{.quiet = std::make_unique<c3::logging::ScopedSink>(quiet_sink()), .backend = nullptr};
-  auto result = DesktopBackend::create(options);
+  auto result = DesktopDisplayBackend::create(options);
   if (!result.backend) {
     if (result.error.rfind("SDL_", 0) == 0) {
       SKIP("no display available: " << result.error);
@@ -164,7 +165,7 @@ void draw_two_tone(NVGcontext* vg, Size panel) {
 }
 
 /// Draws one frame of the two-tone pattern and presents it.
-void present_two_tone(DesktopBackend& backend) {
+void present_two_tone(DesktopDisplayBackend& backend) {
   NVGcontext* vg = backend.begin_frame();
   REQUIRE(vg != nullptr);
   draw_two_tone(vg, backend.size());
@@ -172,7 +173,7 @@ void present_two_tone(DesktopBackend& backend) {
 }
 
 /// Resizes the window and runs a frame so the backend refreshes its viewport.
-void resize_and_settle(DesktopBackend& backend, int window_w, int window_h) {
+void resize_and_settle(DesktopDisplayBackend& backend, int window_w, int window_h) {
   SDL_SetWindowSize(backend.window(), window_w, window_h);
   for (int i = 0; i < 5; ++i) {
     SDL_PumpEvents();
@@ -193,7 +194,7 @@ void resize_and_settle(DesktopBackend& backend, int window_w, int window_h) {
 
 TEST_CASE("DesktopBackend: options default to the 2x panel, the target DPI and a 90 percent window",
           "[desktop_display_backend]") {
-  constexpr DesktopBackend::Options defaults{};
+  constexpr DesktopDisplayBackend::Options defaults{};
   STATIC_CHECK(defaults.panel == Size{.width = 1600, .height = 2560});
   STATIC_CHECK(defaults.dpi == 264.0F);
   STATIC_CHECK(defaults.fit_fraction == 0.9F);
@@ -202,17 +203,17 @@ TEST_CASE("DesktopBackend: options default to the 2x panel, the target DPI and a
 
 TEST_CASE("DesktopBackend: is a final, non-copyable DisplayBackend and DebugFrameCapture",
           "[desktop_display_backend]") {
-  STATIC_CHECK(std::is_base_of_v<DisplayBackend, DesktopBackend>);
-  STATIC_CHECK(std::is_base_of_v<DebugFrameCapture, DesktopBackend>);
-  STATIC_CHECK(std::is_final_v<DesktopBackend>);
-  STATIC_CHECK_FALSE(std::is_copy_constructible_v<DesktopBackend>);
-  STATIC_CHECK_FALSE(std::is_move_constructible_v<DesktopBackend>);
-  STATIC_CHECK_FALSE(std::is_default_constructible_v<DesktopBackend>);
-  STATIC_CHECK(noexcept(std::declval<DesktopBackend&>().begin_frame()));
-  STATIC_CHECK(noexcept(std::declval<DesktopBackend&>().end_frame()));
-  STATIC_CHECK(noexcept(std::declval<DesktopBackend&>().request_capture(std::string_view{})));
-  STATIC_CHECK(noexcept(std::declval<const DesktopBackend&>().size()));
-  STATIC_CHECK(noexcept(std::declval<const DesktopBackend&>().viewport()));
+  STATIC_CHECK(std::is_base_of_v<DisplayBackend, DesktopDisplayBackend>);
+  STATIC_CHECK(std::is_base_of_v<DebugFrameCapture, DesktopDisplayBackend>);
+  STATIC_CHECK(std::is_final_v<DesktopDisplayBackend>);
+  STATIC_CHECK_FALSE(std::is_copy_constructible_v<DesktopDisplayBackend>);
+  STATIC_CHECK_FALSE(std::is_move_constructible_v<DesktopDisplayBackend>);
+  STATIC_CHECK_FALSE(std::is_default_constructible_v<DesktopDisplayBackend>);
+  STATIC_CHECK(noexcept(std::declval<DesktopDisplayBackend&>().begin_frame()));
+  STATIC_CHECK(noexcept(std::declval<DesktopDisplayBackend&>().end_frame()));
+  STATIC_CHECK(noexcept(std::declval<DesktopDisplayBackend&>().request_capture(std::string_view{})));
+  STATIC_CHECK(noexcept(std::declval<const DesktopDisplayBackend&>().size()));
+  STATIC_CHECK(noexcept(std::declval<const DesktopDisplayBackend&>().viewport()));
 }
 
 TEST_CASE("create: a non-positive panel is refused before SDL is touched", "[desktop_display_backend]") {
@@ -220,9 +221,9 @@ TEST_CASE("create: a non-positive panel is refused before SDL is touched", "[des
   for (const Size bad : {Size{.width = 0, .height = 640}, Size{.width = 400, .height = 0},
                          Size{.width = -1, .height = 640}, Size{.width = 400, .height = -10}}) {
     INFO("panel " << bad.width << "x" << bad.height);
-    DesktopBackend::Options options = small_options();
+    DesktopDisplayBackend::Options options = small_options();
     options.panel = bad;
-    const auto result = DesktopBackend::create(options);
+    const auto result = DesktopDisplayBackend::create(options);
     CHECK(result.backend == nullptr);
     CHECK(result.error == "panel size must be positive");
   }
@@ -249,7 +250,7 @@ TEST_CASE("create: opens a window and a GL context and reports the configured pa
 }
 
 TEST_CASE("create: the DPI is the target panel's, whatever the laptop reports", "[desktop_display_backend]") {
-  DesktopBackend::Options options = small_options();
+  DesktopDisplayBackend::Options options = small_options();
   options.dpi = 132.5F;
   const auto backend = create_or_skip(options);
   CHECK(backend->dpi() == 132.5F);
@@ -304,7 +305,7 @@ TEST_CASE("create: a larger fit fraction gives a larger window", "[desktop_displ
     const auto small = create_or_skip();
     SDL_GetWindowSize(small->window(), &small_w, &small_h);
   }
-  DesktopBackend::Options options = small_options();
+  DesktopDisplayBackend::Options options = small_options();
   options.fit_fraction = 0.5F;
   const auto bigger = create_or_skip(options);
   int big_w = 0;
