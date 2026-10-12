@@ -26,9 +26,12 @@ endif()
 # Shared warning set for first-party code. Third-party targets do not use it.
 add_library(c3_warnings INTERFACE)
 target_compile_options(c3_warnings INTERFACE
-    -Wall -Wextra -Wpedantic -Wshadow -Wnon-virtual-dtor -Wold-style-cast
-    -Woverloaded-virtual -Wcast-align -Wunused -Wnull-dereference
+    -Wall -Wextra -Wpedantic -Wshadow -Wcast-align -Wunused -Wnull-dereference
     -Werror=return-type
+    # C++-only flags; the C front end warns when handed them (the NanoVG GL units are C).
+    $<$<COMPILE_LANGUAGE:CXX>:-Wnon-virtual-dtor>
+    $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
+    $<$<COMPILE_LANGUAGE:CXX>:-Woverloaded-virtual>
     # Designated initialisers that omit fields are the intended way to build Config in
     # tests; GCC 12 and clang 14 warn about them under -Wextra.
     -Wno-missing-field-initializers)
