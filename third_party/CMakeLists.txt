@@ -15,7 +15,7 @@ set_target_properties(nanovg PROPERTIES C_STANDARD 99)
 # Prefer the distro package (bookworm: nlohmann-json3-dev); fall back to the pinned 
 # release tarball, which is the 100 KB packaging drop, not the full repository.
 # ---------------------------------------------------------------------------
-find_package(nlohmann_json 3.10 QUIET)
+find_package(nlohmann_json 3.10 QUIET GLOBAL)
 if(NOT nlohmann_json_FOUND)
     include(FetchContent)
     set(JSON_BuildTests OFF CACHE INTERNAL "")
