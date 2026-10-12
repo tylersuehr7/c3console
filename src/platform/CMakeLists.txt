@@ -8,11 +8,9 @@ if(C3_BACKEND STREQUAL "desktop")
     find_package(SDL2 CONFIG REQUIRED)
     find_package(OpenGL REQUIRED)
 
-    # nvg_gl3.c is the one translation unit that instantiates NanoVG's GL3 backend
-    # (nvgCreateGL3 / nvgDeleteGL3); without it nothing that uses DesktopBackend links.
     add_library(c3_platform_desktop STATIC
-        desktop_display_backend.cpp
-        nvg_gl3.c)
+        nvg_gl3.c
+        desktop_display_backend.cpp)
 
     target_include_directories(c3_platform_desktop PUBLIC ../)
     target_link_libraries(c3_platform_desktop PUBLIC SDL2::SDL2 OpenGL::GL nanovg c3_warnings c3_log)
@@ -27,7 +25,7 @@ if(C3_BACKEND STREQUAL "drm")
     pkg_check_modules(C3_DRM REQUIRED IMPORTED_TARGET libdrm gbm egl glesv2 libinput libudev)
 
     add_library(c3_platform_drm STATIC
-        example_drm.cpp)
+        nvg_gles2.c)
 
     target_include_directories(c3_platform_drm PUBLIC src)
     target_link_libraries(c3_platform_drm PUBLIC PkgConfig::C3_DRM nanovg c3_warnings c3_log)
