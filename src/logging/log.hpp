@@ -83,22 +83,6 @@ private:
 
 bool write(Level level, std::string_view tag, std::string_view message) noexcept;
 
-constexpr void debug(std::string_view tag, std::string_view message) noexcept {
-  write(Level::Debug, tag, message);
-}
-
-constexpr void info(std::string_view tag, std::string_view message) noexcept {
-  write(Level::Info, tag, message);
-}
-
-constexpr void warn(std::string_view tag, std::string_view message) noexcept {
-  write(Level::Warn, tag, message);
-}
-
-constexpr void error(std::string_view tag, std::string_view message) noexcept {
-  write(Level::Error, tag, message);
-}
-
 namespace {
 template <typename... Args>
 constexpr void emit(Level level, std::string_view tag, Args&&... args) noexcept {
@@ -111,22 +95,22 @@ constexpr void emit(Level level, std::string_view tag, Args&&... args) noexcept 
 }  // namespace
 
 template <typename... Args>
-constexpr void debug_va(std::string_view tag, Args&&... args) noexcept {
+constexpr void debug(std::string_view tag, Args&&... args) noexcept {
   emit(Level::Debug, tag, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
-constexpr void info_va(std::string_view tag, Args&&... args) noexcept {
+constexpr void info(std::string_view tag, Args&&... args) noexcept {
   emit(Level::Info, tag, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
-constexpr void warn_va(std::string_view tag, Args&&... args) noexcept {
+constexpr void warn(std::string_view tag, Args&&... args) noexcept {
   emit(Level::Warn, tag, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
-constexpr void error_va(std::string_view tag, Args&&... args) noexcept {
+constexpr void error(std::string_view tag, Args&&... args) noexcept {
   emit(Level::Error, tag, std::forward<Args>(args)...);
 }
 
