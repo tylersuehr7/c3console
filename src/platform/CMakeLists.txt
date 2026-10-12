@@ -10,7 +10,8 @@ if(C3_BACKEND STREQUAL "desktop")
 
     add_library(c3_platform_desktop STATIC
         nvg_gl3.c
-        desktop_display_backend.cpp)
+        desktop_display_backend.cpp
+        sdl_input_source.cpp)
 
     target_include_directories(c3_platform_desktop PUBLIC ../)
     target_link_libraries(c3_platform_desktop PUBLIC SDL2::SDL2 OpenGL::GL nanovg c3_warnings c3_log)

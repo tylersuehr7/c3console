@@ -47,10 +47,12 @@ add_executable(c3console_tests
 target_link_libraries(c3console_tests PRIVATE c3_vehicle c3_telemetry c3_platform_common c3_log c3_warnings
                                               Catch2::Catch2WithMain)
 
-# The desktop backend test opens a real SDL window and GL context, so it exists only in the
-# desktop configuration (the drm build has no SDL2). It skips itself when no display is present.
+# The desktop backend and SDL input tests open a real SDL window and GL context, so they exist
+# only in the desktop configuration (the drm build has no SDL2). They skip when no display is present.
 if(C3_BACKEND STREQUAL "desktop")
-    target_sources(c3console_tests PRIVATE test_desktop_display_backend.cpp)
+    target_sources(c3console_tests PRIVATE
+        test_desktop_display_backend.cpp
+        test_sdl_input_source.cpp)
     target_link_libraries(c3console_tests PRIVATE c3_platform_desktop)
 endif()
 
