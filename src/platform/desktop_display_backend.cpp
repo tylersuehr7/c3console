@@ -119,9 +119,9 @@ DesktopBackend::Result DesktopBackend::create(const Options& options) {
   const auto* version =  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
       reinterpret_cast<const char*>(glGetString(GL_VERSION));
 
-  logging::debug_va(kUnit, "desktop backend: window ", win.width, "x", win.height, " pt, drawable ",
-                    b->viewport_.drawable_w, "x", b->viewport_.drawable_h, " px, panel ", options.panel.width, "x",
-                    options.panel.height, " @ scale ", b->viewport_.scale, ", GL ", version != nullptr ? version : "?");
+  logging::debug(kUnit, "desktop backend: window ", win.width, "x", win.height, " pt, drawable ",
+                 b->viewport_.drawable_w, "x", b->viewport_.drawable_h, " px, panel ", options.panel.width, "x",
+                 options.panel.height, " @ scale ", b->viewport_.scale, ", GL ", version != nullptr ? version : "?");
 
   return {std::move(b), {}};
 }

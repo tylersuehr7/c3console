@@ -59,7 +59,11 @@ TEST_CASE("format_fixed: zero decimals rounds to a whole number", "[fixed_format
 
 TEST_CASE("format_fixed: truncates safely when the number does not fit", "[fixed_format]") {
   std::array<char, 4> buf{};
-  const auto v = format_fixed(buf, 12345.678, 2);
+  // Opaque inputs: GCC would otherwise prove the truncation at compile time and warn from
+  // inside the header, where no pragma in this file can reach.
+  const volatile double value = 12345.678;
+  const volatile int decimals = 2;
+  const auto v = format_fixed(buf, value, decimals);
   CHECK(v == "123");
   CHECK(buf[3] == '\0');
 }
