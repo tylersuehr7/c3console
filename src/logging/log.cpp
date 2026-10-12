@@ -1,7 +1,5 @@
 #include "log.hpp"
 
-#include "utils/fixed_text.hpp"
-
 #include <atomic>
 #include <cstdio>
 

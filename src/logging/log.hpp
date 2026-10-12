@@ -1,5 +1,7 @@
 #pragma once
 
+#include "utils/fixed_text.hpp"
+
 #include <cstdint>
 #include <string_view>
 
@@ -95,6 +97,37 @@ constexpr void warn(std::string_view tag, std::string_view message) noexcept {
 
 constexpr void error(std::string_view tag, std::string_view message) noexcept {
   write(Level::Error, tag, message);
+}
+
+namespace {
+template <typename... Args>
+constexpr void emit(Level level, std::string_view tag, Args&&... args) noexcept {
+  if (get_level() <= level) {
+    utils::FixedText<768> text;
+    (text.append(std::forward<Args>(args)), ...);
+    write(level, tag, text.view());
+  }
+}
+}  // namespace
+
+template <typename... Args>
+constexpr void debug_va(std::string_view tag, Args&&... args) noexcept {
+  emit(Level::Debug, tag, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+constexpr void info(std::string_view tag, Args&&... args) noexcept {
+  emit(Level::Info, tag, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+constexpr void warn(std::string_view tag, Args&&... args) noexcept {
+  emit(Level::Warn, tag, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+constexpr void error(std::string_view tag, Args&&... args) noexcept {
+  emit(Level::Error, tag, std::forward<Args>(args)...);
 }
 
 }  // namespace c3::logging
