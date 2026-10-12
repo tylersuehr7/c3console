@@ -8,8 +8,7 @@ if(C3_BACKEND STREQUAL "desktop")
     find_package(SDL2 CONFIG REQUIRED)
     find_package(OpenGL REQUIRED)
 
-    add_library(c3_platform_desktop STATIC
-        example_backend.cpp)
+    add_library(c3_platform_desktop STATIC example_backend.cpp)
 
     target_include_directories(c3_platform_desktop PUBLIC src)
     target_link_libraries(c3_platform_desktop PUBLIC SDL2::SDL2 OpenGL::GL nanovg c3_warnings c3_log)
