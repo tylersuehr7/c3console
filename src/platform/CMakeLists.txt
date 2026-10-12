@@ -8,13 +8,17 @@ if(C3_BACKEND STREQUAL "desktop")
     find_package(SDL2 CONFIG REQUIRED)
     find_package(OpenGL REQUIRED)
 
-    add_library(c3_platform_desktop STATIC example_backend.cpp)
+    # nvg_gl3.c is the one translation unit that instantiates NanoVG's GL3 backend
+    # (nvgCreateGL3 / nvgDeleteGL3); without it nothing that uses DesktopBackend links.
+    add_library(c3_platform_desktop STATIC
+        desktop_display_backend.cpp
+        nvg_gl3.c)
 
-    target_include_directories(c3_platform_desktop PUBLIC src)
+    target_include_directories(c3_platform_desktop PUBLIC ../)
     target_link_libraries(c3_platform_desktop PUBLIC SDL2::SDL2 OpenGL::GL nanovg c3_warnings c3_log)
 
     # nvg_gl3.c instantiates third-party NanoVG code; silence its warnings only.
-    # set_source_files_properties(src/platform/nvg_gl3.c PROPERTIES COMPILE_OPTIONS "-w")
+    set_source_files_properties(nvg_gl3.c PROPERTIES COMPILE_OPTIONS "-w")
 endif()
 
 # DRM backend builds with KMS + GBM + EGL + GLES2 stack
@@ -29,5 +33,5 @@ if(C3_BACKEND STREQUAL "drm")
     target_link_libraries(c3_platform_drm PUBLIC PkgConfig::C3_DRM nanovg c3_warnings c3_log)
 
     # nvg_gles2.c instantiates third-party NanoVG code; silence its warnings only.
-    # set_source_files_properties(src/platform/nvg_gles2.c PROPERTIES COMPILE_OPTIONS "-w")
+    set_source_files_properties(nvg_gles2.c PROPERTIES COMPILE_OPTIONS "-w")
 endif()
