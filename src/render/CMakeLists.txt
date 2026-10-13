@@ -6,6 +6,7 @@ set(SOURCES
     icons.cpp
     layout.cpp
     settings.cpp
+    sheet.cpp
     status_tools.cpp
     tabs.cpp
     theme.cpp
