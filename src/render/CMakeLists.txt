@@ -6,6 +6,7 @@ set(SOURCES
     icons.cpp
     layout.cpp
     settings.cpp
+    tabs.cpp
     theme.cpp
     widgets.cpp
 )
