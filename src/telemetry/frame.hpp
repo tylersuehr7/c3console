@@ -71,6 +71,8 @@ struct Fault {
   Channel channel{};  // meaningful for SenderOpen / SenderShort only
 };
 
+constexpr std::size_t kMaxFaults = kFaultKindCount + 1;
+
 struct Frame {
   std::uint32_t t_ms = 0;      // MCU milliseconds since boot
   float fuel_fraction = 0.0F;  // fraction 0..1
@@ -78,7 +80,7 @@ struct Frame {
   float coolant_f = 0.0F;  // °F
   float voltage_v = 0.0F;
   std::array<std::int32_t, kChannelCount> raw{};  // ADC counts, calibration screen only
-  utils::FixedVector<Fault, kFaultKindCount + 1> faults{};
+  utils::FixedVector<Fault, kMaxFaults> faults{};
   std::optional<vehicle::RelayState> relays{};
   bool reverse = false;  // `rev`: reverse gear sensed on the lamp circuit; drives the camera
 };
