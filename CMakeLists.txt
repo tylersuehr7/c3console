@@ -45,17 +45,18 @@ add_subdirectory(third_party)
 # First party libraries
 # ---------------------------------------------------------------------------
 
-add_subdirectory(src/logging)    # platform logging; can live without depending on app.
+add_subdirectory(src/logging)    # Platform logging; can live without depending on app.
 add_subdirectory(src/vehicle)    # Pi -> MCU. State, command codec, acknowlege parser; no I/O.
 add_subdirectory(src/telemetry)  # MCU -> Pi. Ingest framing, parsing, sources, calibration, I/O, etc.
 add_subdirectory(src/platform)   # Desktop / DRM systems that target specific platform (test / screen / etc.)
 add_subdirectory(src/render)     # GUI; NanoVG consumes presentation data and renders it.
+add_subdirectory(src/app)        # Orchestration; exceptions are confined to startup and background persistence.
 
 # ---------------------------------------------------------------------------
 # Executable
 # ---------------------------------------------------------------------------
 add_executable(c3console src/main.cpp)
-target_link_libraries(c3console PRIVATE c3_warnings c3_log c3_vehicle)
+target_link_libraries(c3console PRIVATE c3_warnings c3_log c3_vehicle c3_app)
 target_link_libraries(c3console PUBLIC nanovg)
 
 if(C3_BACKEND STREQUAL "desktop")
