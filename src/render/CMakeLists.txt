@@ -2,6 +2,7 @@ set(SOURCES
     fonts.cpp
     icons.cpp
     layout.cpp
+    theme.cpp
 )
 add_library(c3_render STATIC ${SOURCES})
 target_include_directories(c3_render PUBLIC ../)
