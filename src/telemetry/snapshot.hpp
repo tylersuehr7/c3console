@@ -10,7 +10,7 @@ namespace c3::telemetry {
 
 struct TelemetryView {
   const Frame* frame = nullptr;
-  LineState link = LinkState::NoData;
+  LinkState link = LinkState::NoData;
   std::uint64_t age_ms = 0;
 
   [[nodiscard]] bool live() const noexcept { return frame != nullptr && link == LinkState::Live; }
@@ -22,6 +22,6 @@ struct TimedFrame {
 };
 static_assert(std::is_trivially_copyable_v<TimedFrame>);
 
-using FrameSnapshot = util::TripleBuffer<TimedFrame>;
+using FrameSnapshot = utils::TripleBuffer<TimedFrame>;
 
 }  // namespace c3::telemetry
