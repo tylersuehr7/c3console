@@ -1,5 +1,5 @@
 set(SOURCES 
-    example.cpp
+    layout.cpp
 )
 add_library(c3_render STATIC ${SOURCES})
 target_include_directories(c3_render PUBLIC ../)
