@@ -1,4 +1,5 @@
 set(SOURCES 
+    icons.cpp
     layout.cpp
 )
 add_library(c3_render STATIC ${SOURCES})
