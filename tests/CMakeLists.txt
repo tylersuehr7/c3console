@@ -16,10 +16,8 @@ include(Catch)
 # layout arithmetic, touch transform.
 add_executable(c3console_tests
     test_main.cpp
-    test_mock_source.cpp
-    test_panel_rotation.cpp
-    test_panel_touch_contact.cpp
-    test_panel_viewport.cpp
+    test_args.cpp
+    test_config.cpp
     test_calibration.cpp
     test_crc16.cpp
     test_csv_codec.cpp
@@ -31,21 +29,32 @@ add_executable(c3console_tests
     test_fixed_vector.cpp
     test_flat_json.cpp
     test_gui_rendering.cpp
+    test_join_enum_names.cpp
     test_linear_curve.cpp
     test_log.cpp
+    test_mock_command_sink.cpp
+    test_mock_source.cpp
+    test_panel_rotation.cpp
+    test_panel_touch_contact.cpp
+    test_panel_viewport.cpp
+    test_parse_enum_name.cpp
     test_parse_number.cpp
     test_protocol.cpp
     test_replay_source.cpp
+    test_settings_store.cpp
     test_spsc_queue.cpp
+    test_toml.cpp
     test_triple_buffer.cpp
     test_uart_source.cpp
     test_unique_fd.cpp
     test_vehicle_commands.cpp
     test_vehicle_types.cpp)
 
-# c3_render carries c3_vehicle, c3_telemetry and nanovg publicly. The backend-neutral part of
-# the platform module is always linked; the backend libraries are gated below.
+# c3_render carries c3_vehicle, c3_telemetry and nanovg publicly; c3_app carries c3_log and
+# c3_telemetry. The backend-neutral part of the platform module is always linked; the backend
+# libraries are gated below.
 target_link_libraries(c3console_tests PRIVATE
+    c3_app
     c3_render
     c3_vehicle
     c3_telemetry
