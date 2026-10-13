@@ -9,7 +9,7 @@
 
 namespace c3::render {
 
-/// 0xRRGGBB -> opaque colour.
+/// 0xRRGGBB -> opaque color.
 [[nodiscard]] Color rgb(std::uint32_t hex) noexcept;
 /// 0xRRGGBB with alpha 0..1.
 [[nodiscard]] Color rgba(std::uint32_t hex, float alpha) noexcept;

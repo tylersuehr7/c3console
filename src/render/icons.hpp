@@ -30,7 +30,7 @@ enum class Icon : std::uint8_t {
   Snowflake,  // A/C
 };
 
-/// Draws `icon` centred on (cx, cy) inside a size × size box with the given stroke colour.
+/// Draws `icon` centred on (cx, cy) inside a size × size box with the given stroke color.
 /// Stroke width follows the mockup: 2 units of the 24-unit box.
 void draw_icon(Canvas* vg, Icon icon, float cx, float cy, float size, Color stroke, float stroke_units = 2.0F) noexcept;
 

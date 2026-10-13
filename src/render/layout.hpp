@@ -1,14 +1,5 @@
 // Every rect on the panel, computed once from the panel size.
-//
 // Proportions come from the LAYOUT table in mockups/c3console-ui-mockup.html.
-// Drawn at 2× for the 800 × 1280 panel (reference 1600 × 2560): 40 px side margin,
-// 88 px status bar, the CarPlay well on top as the hero, a 64 px tab bar under it,
-// a 528 px cluster (fuel and systems cards on the left, the two arc gauges to their
-// right), a 392 px control dock of two islands and a 36 px lever hint. Vertical measures
-// scale with panel height, horizontal with width, so the reference panel reproduces the
-// mockup exactly and other panels keep the same structure. The well is snapped to 16
-// px on both axes so the H.264 mode requested from the dongle needs no crop. `scale`
-// is what text and radii multiply by.
 #pragma once
 
 #include "platform/display_backend.hpp"
