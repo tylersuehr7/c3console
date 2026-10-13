@@ -49,6 +49,7 @@ add_subdirectory(src/logging)    # platform logging; can live without depending 
 add_subdirectory(src/vehicle)    # Pi -> MCU. State, command codec, acknowlege parser; no I/O.
 add_subdirectory(src/telemetry)  # MCU -> Pi. Ingest framing, parsing, sources, calibration, I/O, etc.
 add_subdirectory(src/platform)   # Desktop / DRM systems that target specific platform (test / screen / etc.)
+add_subdirectory(src/render)     # GUI; NanoVG consumes presentation data and renders it.
 
 # ---------------------------------------------------------------------------
 # Executable
