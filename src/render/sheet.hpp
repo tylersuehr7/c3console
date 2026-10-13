@@ -14,6 +14,7 @@
 #include "telemetry/frame.hpp"
 #include "telemetry/sensor_source.hpp"
 #include "theme.hpp"
+#include "widgets.hpp"
 
 #include <array>
 #include <cstddef>
@@ -96,6 +97,18 @@ constexpr std::size_t kSheetControlCount = static_cast<std::size_t>(SheetControl
     default:
       return false;
   }
+}
+
+/// How a slider control is drawn. The touch side uses the same style with
+/// widgets::slider_fraction() so a finger on the drawn thumb reads the drawn value.
+[[nodiscard]] constexpr widgets::SliderStyle slider_style(SheetControl c) noexcept {
+  if (c == SheetControl::Volume) {
+    return {.track_h = 20.0F, .thumb_d = 60.0F, .fill_from_start = true};
+  }
+  if (c == SheetControl::Hue) {
+    return {};  // hue_track() draws the default thumb over the spectrum
+  }
+  return {.centre_tick = true};  // balance, fader and the tone sliders have a zero mark
 }
 
 /// The page a root row opens.

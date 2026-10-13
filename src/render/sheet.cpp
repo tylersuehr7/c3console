@@ -496,28 +496,28 @@ void draw_audio(const Ctx& c, const SheetLayout& sl, const SheetModel& m) noexce
     card(c, sl.cards[i]);
   }
   std::array<char, 8> buf{};
-  const widgets::SliderStyle big{.track_h = 20.0F, .thumb_d = 60.0F, .fill_from_start = true};
-  const widgets::SliderStyle centred{.centre_tick = true};
 
   slider(c, sl.rect(SheetControl::Volume), "VOLUME", utils::format_into(buf, "%d", a.volume), {},
-         frac_of(a.volume, 0, 100), big);
+         frac_of(a.volume, 0, 100), slider_style(SheetControl::Volume));
   const Icon mute_icon = Icon::SpeakerMuted;
   widgets::toggle(c.vg, c.f, c.t, c.s, sl.rect(SheetControl::Mute), "Mute", a.mute ? "ON" : "OFF", a.mute,
                   m.pressed == SheetControl::Mute, &mute_icon);
 
   slider(c, sl.rect(SheetControl::Balance), "BALANCE", signed_int(buf, a.balance), {}, frac_of(a.balance, -10, 10),
-         centred, "LEFT", "RIGHT");
-  slider(c, sl.rect(SheetControl::Fader), "FADER", signed_int(buf, a.fader), {}, frac_of(a.fader, -10, 10), centred,
-         "REAR", "FRONT");
+         slider_style(SheetControl::Balance), "LEFT", "RIGHT");
+  slider(c, sl.rect(SheetControl::Fader), "FADER", signed_int(buf, a.fader), {}, frac_of(a.fader, -10, 10),
+         slider_style(SheetControl::Fader), "REAR", "FRONT");
   slider(c, sl.rect(SheetControl::Sub), "SUB LEVEL", signed_int(buf, a.sub_db), "dB", frac_of(a.sub_db, -12, 6),
-         centred,
+         slider_style(SheetControl::Sub),
          "\xE2\x88\x92"
          "12",
          "+6");
-  slider(c, sl.rect(SheetControl::Bass), "BASS", signed_int(buf, a.bass_db), "dB", frac_of(a.bass_db, -6, 6), centred);
-  slider(c, sl.rect(SheetControl::Mid), "MID", signed_int(buf, a.mid_db), "dB", frac_of(a.mid_db, -6, 6), centred);
+  slider(c, sl.rect(SheetControl::Bass), "BASS", signed_int(buf, a.bass_db), "dB", frac_of(a.bass_db, -6, 6),
+         slider_style(SheetControl::Bass));
+  slider(c, sl.rect(SheetControl::Mid), "MID", signed_int(buf, a.mid_db), "dB", frac_of(a.mid_db, -6, 6),
+         slider_style(SheetControl::Mid));
   slider(c, sl.rect(SheetControl::Treble), "TREBLE", signed_int(buf, a.treble_db), "dB", frac_of(a.treble_db, -6, 6),
-         centred);
+         slider_style(SheetControl::Treble));
 
   control_label(c, sl.preset_group, "PRESET");
   constexpr std::array<std::string_view, 4> kPresets = {"Flat", "Rock", "Cruise", "Voice"};
