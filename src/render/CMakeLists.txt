@@ -2,6 +2,7 @@ set(SOURCES
     alerts.cpp
     brand.cpp
     camera_surface.cpp
+    console_scene.cpp
     dock.cpp
     fonts.cpp
     icons.cpp
