@@ -347,7 +347,7 @@ TEST_CASE("open: a missing file is an error naming the path", "[replay_source]")
   g_now_ms = 0;
   auto result = ReplaySource::open(path, &fake_now, kTimeout);
   CHECK(result.source == nullptr);
-  CHECK(result.error == "replay: cannot open " + path);
+  CHECK(result.error == path + ": cannot open");
   CHECK(result.warnings.empty());
   CHECK(result.summary.empty());
 }

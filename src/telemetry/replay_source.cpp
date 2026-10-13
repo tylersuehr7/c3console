@@ -21,7 +21,7 @@ ReplaySource::Result ReplaySource::open(const std::string& path, utils::Monotoni
   std::ifstream in(path, std::ios::binary);
   if (!in) {
     Result failed;
-    failed.error = "replay: cannot open " + path;
+    failed.error = path + ": cannot open";  // same shape as the parse errors: "<name>: <reason>"
     return failed;
   }
 

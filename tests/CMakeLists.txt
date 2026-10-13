@@ -22,6 +22,7 @@ add_executable(c3console_tests
     test_crc16.cpp
     test_csv_codec.cpp
     test_csv_recorder.cpp
+    test_dock_controller.cpp
     test_fault_codes.cpp
     test_file_watchdog.cpp
     test_fixed_format.cpp
@@ -41,14 +42,17 @@ add_executable(c3console_tests
     test_parse_number.cpp
     test_protocol.cpp
     test_replay_source.cpp
+    test_sensor_source_factory.cpp
     test_settings_store.cpp
     test_spsc_queue.cpp
+    test_telemetry_ingestor.cpp
     test_toml.cpp
     test_triple_buffer.cpp
     test_uart_source.cpp
     test_unique_fd.cpp
     test_vehicle_commands.cpp
-    test_vehicle_types.cpp)
+    test_vehicle_types.cpp
+    test_well_controller.cpp)
 
 # c3_render carries c3_vehicle, c3_telemetry and nanovg publicly; c3_app carries c3_log and
 # c3_telemetry. The backend-neutral part of the platform module is always linked; the backend
