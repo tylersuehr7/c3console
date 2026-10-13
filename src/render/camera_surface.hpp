@@ -37,10 +37,11 @@ struct CameraModel {
 
 struct CameraLayout {
   Rect well;
-  float scale = 1.0F;
-  Rect guides_button;
+  float scale = 1.0F;  // well pixels per mockup unit (1520-wide reference)
+  Rect guides_button;  // top-right tools: guides, then close at the corner
   Rect close_button;
 
+  /// Places the two tool buttons inside `well`'s top-right corner.
   [[nodiscard]] static CameraLayout compute(const Rect& well) noexcept;
 
   /// `state` decides whether the close button exists.

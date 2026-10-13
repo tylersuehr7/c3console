@@ -1,3 +1,4 @@
+// Icons — the mockup's 24-unit stroke glyphs, traced as NanoVG paths.
 #pragma once
 
 #include "canvas.hpp"

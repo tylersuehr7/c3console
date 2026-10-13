@@ -1,3 +1,4 @@
+// Tabs — the pill under the well that chooses what the well shows: CarPlay, Camera or Settings.
 #pragma once
 
 #include "canvas.hpp"
@@ -38,11 +39,15 @@ constexpr std::size_t kTabCount = static_cast<std::size_t>(Tab::Count);
 struct TabsLayout {
   float scale = 1.0F;  // pixels per mockup unit (64-unit bar)
   Rect pill;
-  std::array<Rect, kTabCount> buttons;
+  std::array<Rect, kTabCount> buttons;  // indexed by Tab
 
-  /// Centred in `tabs`: a 64-unit pill of 52-unit buttons with 6-unit padding and gaps.
+  /// Centred in `tabs`: a 64-unit pill of 52-unit buttons with 6-unit padding and gaps. The
+  /// scale comes from the bar height; button widths are fixed per caption.
   [[nodiscard]] static TabsLayout compute(const Rect& tabs) noexcept;
+
+  /// The tab whose button contains (x, y); the pill's padding and gaps are not tabs.
   [[nodiscard]] std::optional<Tab> hit_test(float x, float y) const noexcept;
+
   [[nodiscard]] const Rect& rect(Tab t) const noexcept { return buttons[static_cast<std::size_t>(t)]; }
 };
 

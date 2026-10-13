@@ -11,11 +11,24 @@ namespace c3::render::widgets {
 namespace {
 
 constexpr float kStateTracking = 2.2F;  // .10em × 22
+constexpr float kThumbRefD = 52.0F;     // mockup thumb diameter; its 5-unit ring scales with it
+constexpr float kSwatchRefD = 84.0F;    // mockup .sw diameter; the selection ring scales with it
 
+// Slider thumb: drop shadow, a ring in the sheet colour, then the disc.
 void thumb(Canvas* vg, float cx, float cy, float d, Color fill, Color ring) noexcept {
   draw::circle_fill(vg, cx, cy + d * 0.08F, d / 2.0F + 4.0F, rgba(0x000000, 0.25F));  // the mockup's drop shadow
-  draw::circle_fill(vg, cx, cy, d / 2.0F, ring);  // 5-unit border in the sheet colour
-  draw::circle_fill(vg, cx, cy, d / 2.0F - 5.0F * (d / 52.0F), fill);
+  draw::circle_fill(vg, cx, cy, d / 2.0F, ring);
+  draw::circle_fill(vg, cx, cy, d / 2.0F - 5.0F * (d / kThumbRefD), fill);
+}
+
+// Horizontal travel of a thumb centre inside `r`: the half-thumb margins at both ends.
+struct Travel {
+  float x0;
+  float x1;
+};
+
+[[nodiscard]] Travel thumb_travel(const Rect& r, float thumb_d) noexcept {
+  return {.x0 = r.x + thumb_d / 2.0F, .x1 = r.right() - thumb_d / 2.0F};
 }
 
 }  // namespace
@@ -76,8 +89,7 @@ void slider(Canvas* vg, const Theme& t, float scale, const Rect& r, float frac, 
   const float cy = r.cy();
   const float th = style.track_h * scale;
   const float d = style.thumb_d * scale;
-  const float x0 = r.x + d / 2.0F;
-  const float x1 = r.right() - d / 2.0F;
+  const auto [x0, x1] = thumb_travel(r, d);
   const float tx = x0 + (x1 - x0) * std::clamp(frac, 0.0F, 1.0F);
 
   draw::rounded_fill(vg, {.x = x0, .y = cy - th / 2.0F, .w = x1 - x0, .h = th}, th / 2.0F, t.line2);
@@ -98,9 +110,8 @@ void slider(Canvas* vg, const Theme& t, float scale, const Rect& r, float frac, 
 void hue_track(Canvas* vg, float scale, const Rect& r, float frac, Color thumb_color, Color sheet_bg) noexcept {
   const float cy = r.cy();
   const float th = 16.0F * scale;
-  const float d = 52.0F * scale;
-  const float x0 = r.x + d / 2.0F;
-  const float x1 = r.right() - d / 2.0F;
+  const float d = kThumbRefD * scale;
+  const auto [x0, x1] = thumb_travel(r, d);
   // Six gradient stops, drawn as adjoining segments under a clip.
   {
     const draw::State st(vg);
@@ -122,15 +133,13 @@ void swatch(Canvas* vg, const Theme& t, const Rect& r, Color color, bool on) noe
   draw::circle_fill(vg, r.cx(), r.cy(), d / 2.0F, color);
   draw::circle_stroke(vg, r.cx(), r.cy(), d / 2.0F - 1.0F, 2.0F, rgba(0x000000, 0.18F));
   if (on) {
-    draw::circle_stroke(vg, r.cx(), r.cy(), d / 2.0F + 7.0F * (d / 84.0F), 4.0F * (d / 84.0F), t.ink);
+    const float k = d / kSwatchRefD;
+    draw::circle_stroke(vg, r.cx(), r.cy(), d / 2.0F + 7.0F * k, 4.0F * k, t.ink);
   }
 }
 
-float slider_fraction(const Rect& r, float x) noexcept {
-  // Same inset as slider(): the thumb centre travels between the half-thumb margins.
-  constexpr float kThumbHalf = 26.0F;
-  const float x0 = r.x + kThumbHalf * (r.h / 72.0F);
-  const float x1 = r.right() - kThumbHalf * (r.h / 72.0F);
+float slider_fraction(const Rect& r, float scale, const SliderStyle& style, float x) noexcept {
+  const auto [x0, x1] = thumb_travel(r, style.thumb_d * scale);
   return x1 > x0 ? std::clamp((x - x0) / (x1 - x0), 0.0F, 1.0F) : 0.0F;
 }
 

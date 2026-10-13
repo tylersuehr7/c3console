@@ -25,6 +25,8 @@ enum class Preset : std::uint8_t { Flat = 0, Rock, Cruise, Voice, Count };
       return "Cruise";
     case Preset::Voice:
       return "Voice";
+    case Preset::Count:
+      break;
   }
   return "Flat";
 }
@@ -66,6 +68,8 @@ struct AudioState {
       state.bass_db = -2;
       state.mid_db = 3;
       state.treble_db = 1;
+      break;
+    case Preset::Count:
       break;
   }
   return state;

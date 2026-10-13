@@ -77,6 +77,8 @@ constexpr float kBannerRadius = 26.0F;
       static_cast<void>(utils::format_into(a.detail, "%s", "check wiring"));
       break;
     }
+    case FaultKind::Count:
+      break;
   }
   return a;
 }
@@ -141,7 +143,7 @@ AlertList collect_alerts(const Frame* frame, bool live, std::uint64_t age_ms, Un
 }
 
 void draw_alerts(Canvas* vg, const Rect& well, const Theme& t, const Fonts& f, const AlertList& alerts) noexcept {
-  const float s = well.w > 0 ? well.w / 1520.0F : 1.0F;  // v6 well width
+  const float s = well.w > 0 ? well.w / kReferenceContentW : 1.0F;
   float y = well.y + kBannerInset * s;
   const float x = well.x + kBannerInset * s;
   const float w = well.w - 2 * kBannerInset * s;

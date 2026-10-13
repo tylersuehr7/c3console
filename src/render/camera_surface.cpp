@@ -7,11 +7,11 @@ namespace c3::render {
 
 namespace {
 
-constexpr float kRefW = 1520.0F;  // v6 well width
-constexpr float kWellRadius = 28.0F;
-constexpr float kInset = 24.0F;
-constexpr float kButton = 72.0F;
-constexpr float kGap = 12.0F;
+// Reference geometry, mockup units (well 1520 wide).
+constexpr float kRefW = kReferenceContentW;
+constexpr float kInset = 24.0F;   // well edge to badges and tools
+constexpr float kButton = 72.0F;  // tool button diameter
+constexpr float kGap = 12.0F;     // between badges and between tools
 constexpr float kBadgeH = 64.0F;
 
 [[nodiscard]] constexpr std::string_view state_text(CameraState s) noexcept {

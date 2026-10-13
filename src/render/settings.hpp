@@ -1,3 +1,5 @@
+// Settings — the user's persistent display choices: theme preference, accent colour and units.
+// Loaded at startup and edited from the settings sheet; the render theme is built from them.
 #pragma once
 
 #include "units.hpp"
@@ -47,7 +49,7 @@ constexpr std::array<Swatch, 9> kSwatches = {{{"Ember", 0xFF6A2B},
 
 struct Settings {
   ThemePreference theme = ThemePreference::Dark;
-  std::uint32_t accent = kSwatches[0].rgb;  // 0xRRGGBB
+  std::uint32_t accent = kSwatches[0].rgb;  // 0xRRGGBB; a swatch or a custom hue
   Units units{};
 
   [[nodiscard]] constexpr bool operator==(const Settings&) const noexcept = default;
@@ -64,7 +66,8 @@ struct Settings {
 /// Custom hue at the mockup's fixed 92 % saturation, 58 % lightness. `hue_deg` 0..360.
 [[nodiscard]] std::uint32_t accent_from_hue(float hue_deg) noexcept;
 
-/// Hue in degrees of an 0xRRGGBB colour; 0 for greys.
+/// Hue in degrees, 0..360, of an 0xRRGGBB colour; 0 for greys. Inverse of accent_from_hue()
+/// up to 8-bit rounding.
 [[nodiscard]] float hue_of(std::uint32_t rgb) noexcept;
 
 /// Index into kSwatches when `rgb` is one of them.

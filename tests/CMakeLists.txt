@@ -30,6 +30,7 @@ add_executable(c3console_tests
     test_fixed_text.cpp
     test_fixed_vector.cpp
     test_flat_json.cpp
+    test_gui_rendering.cpp
     test_linear_curve.cpp
     test_log.cpp
     test_parse_number.cpp
@@ -42,13 +43,14 @@ add_executable(c3console_tests
     test_vehicle_commands.cpp
     test_vehicle_types.cpp)
 
-# c3_app and c3_render carry hvac and telemetry publicly; listing them again duplicates the
-# archives on the link line. The backend-neutral part of the platform module is always linked.
-target_link_libraries(c3console_tests PRIVATE 
-    c3_vehicle 
-    c3_telemetry 
-    c3_platform_common 
-    c3_log 
+# c3_render carries c3_vehicle, c3_telemetry and nanovg publicly. The backend-neutral part of
+# the platform module is always linked; the backend libraries are gated below.
+target_link_libraries(c3console_tests PRIVATE
+    c3_render
+    c3_vehicle
+    c3_telemetry
+    c3_platform_common
+    c3_log
     c3_warnings
     Catch2::Catch2WithMain)
 

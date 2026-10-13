@@ -1,3 +1,6 @@
+// draw — thin, allocation-free wrappers over the NanoVG calls the scene uses: fills, strokes,
+// text and a scoped state guard. Each helper begins its own path and sets its own paint, so
+// callers never depend on what was drawn before.
 #pragma once
 
 #include "canvas.hpp"
@@ -44,15 +47,17 @@ private:
 // colors and paints
 // ---------------------------------------------------------------------------
 
-/// `c` with its alpha multiplied by `a`.
+/// `c` with its alpha set to `a` (replaced, not multiplied).
 [[nodiscard]] inline Color alpha(Color c, float a) noexcept {
   return nvgTransRGBAf(c, a);
 }
 
+/// Linear gradient from `c0` at (x0, y0) to `c1` at (x1, y1).
 [[nodiscard]] inline Paint linear(Canvas* vg, float x0, float y0, float x1, float y1, Color c0, Color c1) noexcept {
   return nvgLinearGradient(vg, x0, y0, x1, y1, c0, c1);
 }
 
+/// Radial gradient: `c0` inside radius `r0`, `c1` at radius `r1`.
 [[nodiscard]] inline Paint radial(Canvas* vg, float cx, float cy, float r0, float r1, Color c0, Color c1) noexcept {
   return nvgRadialGradient(vg, cx, cy, r0, r1, c0, c1);
 }
@@ -174,6 +179,8 @@ inline void line(Canvas* vg, float x0, float y0, float x1, float y1, float width
 // text
 // ---------------------------------------------------------------------------
 
+/// Single line of text anchored at (x, y) per `align`. `tracking` is extra letter spacing in
+/// pixels. Draws nothing when `font` is not a loaded handle.
 inline void text(Canvas* vg, int font, float size, Color color, int align, float x, float y, std::string_view s,
                  float tracking = 0.0F) noexcept {
   nvgFontFaceId(vg, font);
@@ -184,6 +191,7 @@ inline void text(Canvas* vg, int font, float size, Color color, int align, float
   nvgText(vg, x, y, s.data(), s.data() + s.size());
 }
 
+/// Advance width of `s` as text() would draw it; 0 when `font` is not a loaded handle.
 [[nodiscard]] inline float text_width(Canvas* vg, int font, float size, std::string_view s,
                                       float tracking = 0.0F) noexcept {
   nvgFontFaceId(vg, font);

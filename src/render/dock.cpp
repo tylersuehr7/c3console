@@ -10,7 +10,7 @@ namespace c3::render {
 namespace {
 
 // Reference geometry (mockup v6 #dock, 1520 × 392).
-constexpr float kRefW = 1520.0F;
+constexpr float kRefW = kReferenceContentW;
 constexpr float kLightsW = 496.0F;  // under the fuel/systems column
 constexpr float kIslandGap = 16.0F;
 constexpr float kPadTop = 24.0F;
@@ -31,6 +31,16 @@ constexpr float kSegScale = 0.9F;
 
 constexpr std::array<std::string_view, 5> kBlowerCaptions = {"Off", "1", "2", "3", "4"};
 constexpr std::array<std::string_view, 3> kModeCaptions = {"Vent", "Floor", "Defrost"};
+
+// The segmented groups index their buttons by enumerator offset, and draw_dock() casts that
+// offset to the vehicle enums, so both orders have to agree.
+constexpr auto index_of = [](auto e) noexcept { return static_cast<std::size_t>(e); };
+static_assert(index_of(DockControl::ModeFloor) == index_of(DockControl::ModeVent) + 1);
+static_assert(index_of(DockControl::ModeDefrost) == index_of(DockControl::ModeVent) + 2);
+static_assert(index_of(vehicle::HvacMode::Vent) == 0 && index_of(vehicle::HvacMode::Floor) == 1 &&
+              index_of(vehicle::HvacMode::Defrost) == 2);
+static_assert(index_of(DockControl::Blower4) == index_of(DockControl::BlowerOff) + 4);
+static_assert(index_of(vehicle::HvacBlower::Off) == 0 && index_of(vehicle::HvacBlower::L4) == 4);
 
 [[nodiscard]] constexpr Rect scaled(const Rect& dock, float s, float x, float y, float w, float h) noexcept {
   return {.x = dock.x + x * s, .y = dock.y + y * s, .w = w * s, .h = h * s};

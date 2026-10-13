@@ -4,6 +4,7 @@
 #include "draw.hpp"
 #include "telemetry/fault_codes.hpp"
 #include "utils/fixed_format.hpp"
+#include "widgets.hpp"
 
 #include <algorithm>
 #include <array>
@@ -17,10 +18,10 @@ using telemetry::Channel;
 using telemetry::FaultKind;
 
 // ---------------------------------------------------------------------------
-// text helpers
+// text and geometry helpers
 // ---------------------------------------------------------------------------
 constexpr float kTracking = 3.0F;  // letter spacing for small caps labels (mockup: 3 px)
-constexpr std::string_view kDashes = "\xE2\x80\x94 \xE2\x80\x94";  // "— —"
+constexpr std::string_view kDashes = "\xE2\x80\x94 \xE2\x80\x94";  // "— —": the numeral when there is no value
 
 // 0..1 position of `v` on a scale, clamped to the ends.
 [[nodiscard]] constexpr float normalized(float v, float lo, float hi) noexcept {
@@ -37,42 +38,55 @@ struct Point {
 }
 
 // ---------------------------------------------------------------------------
-// gauge model: what to draw for one channel, derived from faults[] and the live flag
+// gauge model: what one tile draws this frame
 // ---------------------------------------------------------------------------
 
 struct GaugeValue {
-  float value = 0.0F;   // numeral
-  float needle = 0.0F;  // damped
+  float value = 0.0F;   // numeral, display units
+  float needle = 0.0F;  // damped, display units
   GaugeStatus status;
   Severity severity = Severity::Alarm;
 };
 
+[[nodiscard]] GaugeValue gauge_value(const SceneInput& in, Channel ch, float value, float needle,
+                                     Severity severity) noexcept {
+  return {.value = value,
+          .needle = needle,
+          .status = classify_gauge(in.telemetry.frame, in.telemetry.live(), ch),
+          .severity = severity};
+}
+
 // ---------------------------------------------------------------------------
 // tile chrome
+//
+// The tile card is drawn in panel pixels, scaled by the layout scale like every other island.
+// The gauge inside it is drawn in the mockup's canvas space (512 wide) through enter_tile_space.
 // ---------------------------------------------------------------------------
 
-constexpr float kTileRadius = 32.0F;
-constexpr float kTileRefW = 512.0F;  // mockup tile width; arcs and bars are drawn in this space
-constexpr float kArcRefH = 544.0F;
-constexpr float kBarRefH = 264.0F;
+constexpr float kTileRefW = 512.0F;  // mockup gauge canvas width; arcs and bars are drawn in this space
+constexpr float kArcRefH = 544.0F;   // mockup arc canvas height
+constexpr float kBarRefH = 264.0F;   // mockup bar canvas height
+constexpr float kTileGlowFeather = 120.0F;
 
-void draw_tile(Canvas* vg, const Rect& r, const Theme& t, GaugeState state, Severity severity) noexcept {
-  draw::rounded_fill(vg, r, kTileRadius, t.surface);
+void draw_tile(Canvas* vg, const Rect& r, const Theme& t, GaugeState state, Severity severity, float scale) noexcept {
+  const float radius = widgets::kTileRadius * scale;
+  draw::rounded_fill(vg, r, radius, t.surface);
 
   Color border = state == GaugeState::Stale ? t.line2 : t.line;
   if (state == GaugeState::SenderFault || (state == GaugeState::Warn && severity == Severity::Alarm)) {
     border = draw::alpha(t.alarm, 0.6F);
     // inset glow, the mockup's box-shadow
-    draw::rounded_fill(vg, r, kTileRadius,
-                       draw::box(vg, r, kTileRadius, 120.0F, draw::alpha(t.alarm, 0.0F), draw::alpha(t.alarm, 0.10F)));
+    draw::rounded_fill(
+        vg, r, radius,
+        draw::box(vg, r, radius, kTileGlowFeather * scale, draw::alpha(t.alarm, 0.0F), draw::alpha(t.alarm, 0.10F)));
   } else if (state == GaugeState::Warn) {
     border = draw::alpha(t.amber, 0.5F);
   }
 
-  draw::rounded_stroke(vg, r, kTileRadius, border);
+  draw::rounded_stroke(vg, r, radius, border);
 }
 
-// Enter the mockup's tile coordinate system: origin at the tile, uniform scale, centred.
+// Enter the mockup's gauge canvas coordinate system: origin at the tile, uniform scale, centred.
 void enter_tile_space(const draw::State& st, const Rect& r, float ref_h) noexcept {
   const float s = std::min(r.w / kTileRefW, r.h / ref_h);
   st.translate(r.x + (r.w - kTileRefW * s) / 2, r.y + (r.h - ref_h * s) / 2);
@@ -88,16 +102,16 @@ struct ArcSpec {
   std::string_view unit;
   float min;
   float max;
-  float major;
+  float major;  // tick step
   int decimals;
-  float zone_lo;
+  float zone_lo;  // red band, display units
   float zone_hi;
 };
 
-void draw_arc_gauge(Canvas* vg, const Rect& r, const ArcSpec& spec, const GaugeValue& g, const Theme& t,
-                    const Fonts& f) noexcept {
+void draw_arc_gauge(Canvas* vg, const Rect& r, const ArcSpec& spec, const GaugeValue& g, const Theme& t, const Fonts& f,
+                    float scale) noexcept {
   using std::numbers::pi_v;
-  draw_tile(vg, r, t, g.status.state, g.severity);
+  draw_tile(vg, r, t, g.status.state, g.severity, scale);
   const draw::State st(vg);
   enter_tile_space(st, r, kArcRefH);
   if (g.status.state == GaugeState::Stale) {
@@ -213,10 +227,10 @@ struct BarSpec {
   std::size_t mark_count;
 };
 
-void draw_bar_gauge(Canvas* vg, const Rect& r, const BarSpec& spec, const GaugeValue& g, const Theme& t,
-                    const Fonts& f) noexcept {
+void draw_bar_gauge(Canvas* vg, const Rect& r, const BarSpec& spec, const GaugeValue& g, const Theme& t, const Fonts& f,
+                    float scale) noexcept {
   const GaugeState state = g.status.state;
-  draw_tile(vg, r, t, state, g.severity);
+  draw_tile(vg, r, t, state, g.severity, scale);
   const draw::State st(vg);
   enter_tile_space(st, r, kBarRefH);
   if (state == GaugeState::Stale) {
@@ -298,7 +312,7 @@ void draw_bar_gauge(Canvas* vg, const Rect& r, const BarSpec& spec, const GaugeV
 }
 
 // ---------------------------------------------------------------------------
-// specs. Oil and coolant follow the units setting (render/units.h); fuel and volts are fixed.
+// specs. Oil and coolant follow the units setting (units.hpp); fuel is fixed.
 //
 // zone_lo/hi paint the red band on the track. They mirror the MCU's documented thresholds
 // (spec §4.1 faults) so the picture agrees with the fault, but nothing here decides a fault.
@@ -326,14 +340,14 @@ constexpr BarSpec kFuelSpec{
     .band_hi = 0.0F,
     .marks = {{{0.0F, "E"}, {25.0F, "\xC2\xBC"}, {50.0F, "\xC2\xBD"}, {75.0F, "\xC2\xBE"}, {100.0F, "F"}}},
     .mark_count = 5};
-[[nodiscard]] GaugeValue gauge_value(const SceneInput& in, Channel ch, float value, float needle,
-                                     Severity severity) noexcept {
-  return {.value = value,
-          .needle = needle,
-          .status = classify_gauge(in.telemetry.frame, in.telemetry.live(), ch),
-          .severity = severity};
-}
 
+// ---------------------------------------------------------------------------
+// Systems card
+// ---------------------------------------------------------------------------
+
+constexpr float kSystemsRefW = 496.0F;  // mockup card width (one cluster tile)
+
+// Link status dot; a glow marks a definite state (up or known-down) as opposed to never seen.
 void draw_dot(Canvas* vg, float x, float y, Color c, bool glow) noexcept {
   if (glow) {
     draw::circle_fill(vg, x, y, 16.0F, draw::radial(vg, x, y, 4.0F, 16.0F, draw::alpha(c, 0.7F), draw::alpha(c, 0.0F)));
@@ -395,13 +409,13 @@ GaugeStatus classify_gauge(const telemetry::Frame* frame, bool live, Channel ch)
 // ConsoleScene
 // ---------------------------------------------------------------------------
 
-void ConsoleScene::Damped::step(float target, float rate, float dt_s) noexcept {
+void DampedValue::step(float target, float rate_per_s, float dt_s) noexcept {
   if (!primed) {
     value = target;
     primed = true;
     return;
   }
-  value += (target - value) * std::min(1.0F, rate * dt_s);
+  value += (target - value) * std::min(1.0F, rate_per_s * dt_s);
 }
 
 ConsoleScene::ConsoleScene(const Layout& layout, const Theme& theme, const Fonts& fonts) noexcept
@@ -444,11 +458,14 @@ void ConsoleScene::draw(Canvas* vg, const SceneInput& in) const noexcept {
   const float clt = to_display_temp(tu, fr != nullptr ? fr->coolant_f : 0.0F);
   const float fuel_percent = fr != nullptr ? fr->fuel_fraction * 100.0F : 0.0F;
   draw_arc_gauge(vg, layout_.oil, arc_spec("OIL PRESSURE", pressure_scale(pu)),
-                 gauge_value(in, Channel::Oil, oil, to_display_pressure(pu, oil_.value), Severity::Alarm), t, f);
+                 gauge_value(in, Channel::Oil, oil, to_display_pressure(pu, oil_.value), Severity::Alarm), t, f,
+                 layout_.scale);
   draw_arc_gauge(vg, layout_.clt, arc_spec("COOLANT", temp_scale(tu)),
-                 gauge_value(in, Channel::Coolant, clt, to_display_temp(tu, clt_.value), Severity::Alarm), t, f);
+                 gauge_value(in, Channel::Coolant, clt, to_display_temp(tu, clt_.value), Severity::Alarm), t, f,
+                 layout_.scale);
   draw_bar_gauge(vg, layout_.fuel, kFuelSpec,
-                 gauge_value(in, Channel::Fuel, fuel_percent, fuel_percent_.value, Severity::Caution), t, f);
+                 gauge_value(in, Channel::Fuel, fuel_percent, fuel_percent_.value, Severity::Caution), t, f,
+                 layout_.scale);
   draw_systems(vg, in);
 
   draw_well(vg, in);
@@ -509,13 +526,13 @@ void ConsoleScene::draw_systems(Canvas* vg, const SceneInput& in) const noexcept
   const Theme& t = theme_;
   const Fonts& f = fonts_;
   const Rect& r = layout_.systems;
-  const float s = r.w / 496.0F;  // mockup card width
+  const float s = r.w / kSystemsRefW;
   constexpr float kPad = 24.0F;
   constexpr float kChipH = 64.0F;
   constexpr float kChipGap = 12.0F;
 
-  draw::rounded_fill(vg, r, kTileRadius * s, t.surface);
-  draw::rounded_stroke(vg, r, kTileRadius * s, t.line);
+  draw::rounded_fill(vg, r, widgets::kTileRadius * s, t.surface);
+  draw::rounded_stroke(vg, r, widgets::kTileRadius * s, t.line);
   draw::text(vg, f.ui_medium, 25.0F * s, t.ink3, draw::kLeftMiddle, r.x + (kPad + 8.0F) * s, r.y + (kPad + 14.0F) * s,
              "SYSTEMS", kTracking * s);
 
@@ -542,12 +559,16 @@ void ConsoleScene::draw_systems(Canvas* vg, const SceneInput& in) const noexcept
   }
 }
 
+// The well's own chrome and, until the dongle session is up, the connecting state (mockup #cpwait).
 void ConsoleScene::draw_well(Canvas* vg, const SceneInput& in) const noexcept {
   using std::numbers::pi_v;
   const Theme& t = theme_;
   const Fonts& f = fonts_;
   const Rect& r = layout_.well;
-  constexpr float kWellRadius = 28.0F;
+  const float s = layout_.scale;
+  constexpr float kSpinnerRadius = 48.0F;
+  constexpr float kSpinnerWidth = 5.0F;
+  constexpr float kSpinnerPeriodS = 1.1F;
   // The well shows the phone's picture, which has its own appearance, so its chrome does not
   // follow our theme: fixed dark colours in both light and dark mode.
   const Color spinner_track = rgba(0xFFFFFF, 0.08F);
@@ -555,21 +576,22 @@ void ConsoleScene::draw_well(Canvas* vg, const SceneInput& in) const noexcept {
   const Color title_ink = rgb(0x9A9EA6);
   const Color subtitle_ink = rgb(0x5B6068);
 
-  draw::rounded_fill(vg, r, kWellRadius, t.well_bg);
-  draw::rounded_stroke(vg, r, kWellRadius, t.line2);
+  draw::rounded_fill(vg, r, kWellRadius * s, t.well_bg);
+  draw::rounded_stroke(vg, r, kWellRadius * s, t.line2);
 
   if (in.carplay_connected) {
     return;  // the decoded video sits here
   }
-  // connecting state: spinner ring, title, subtitle (mockup #cpwait)
+  // connecting state: spinner ring, title, subtitle
   const float cx = r.cx();
-  const float cy = r.cy() - 60.0F;
-  draw::circle_stroke(vg, cx, cy, 48.0F, 5.0F, spinner_track);
-  const float a = std::fmod(in.t_s * 2.0F * pi_v<float> / 1.1F, 2.0F * pi_v<float>);
-  draw::arc_stroke(vg, cx, cy, 48.0F, a, a + pi_v<float> / 2.0F, 5.0F, spinner, draw::Cap::Round);
-  draw::text(vg, f.ui_medium, 40.0F, title_ink, draw::kCenterMiddle, cx, cy + 110.0F, "Connecting to CarPlay");
-  draw::text(vg, f.ui_medium, 26.0F, subtitle_ink, draw::kCenterMiddle, cx, cy + 164.0F, "DONGLE SESSION NEGOTIATING",
-             1.6F);
+  const float cy = r.cy() - 60.0F * s;
+  draw::circle_stroke(vg, cx, cy, kSpinnerRadius * s, kSpinnerWidth * s, spinner_track);
+  const float a = std::fmod(in.t_s * 2.0F * pi_v<float> / kSpinnerPeriodS, 2.0F * pi_v<float>);
+  draw::arc_stroke(vg, cx, cy, kSpinnerRadius * s, a, a + pi_v<float> / 2.0F, kSpinnerWidth * s, spinner,
+                   draw::Cap::Round);
+  draw::text(vg, f.ui_medium, 40.0F * s, title_ink, draw::kCenterMiddle, cx, cy + 110.0F * s, "Connecting to CarPlay");
+  draw::text(vg, f.ui_medium, 26.0F * s, subtitle_ink, draw::kCenterMiddle, cx, cy + 164.0F * s,
+             "DONGLE SESSION NEGOTIATING", 1.6F * s);
 }
 
 }  // namespace c3::render

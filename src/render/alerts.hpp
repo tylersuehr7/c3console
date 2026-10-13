@@ -29,9 +29,9 @@ enum class AlertLevel : std::uint8_t {
 
 struct Alert {
   AlertLevel level = AlertLevel::Neutral;
-  std::string_view title;         // static text
+  std::string_view title;         // static text ("Low oil pressure")
   std::string_view chip;          // short status-bar label ("OIL", "CHARGING")
-  std::array<char, 48> detail{};  // formatted value, NUL-terminated
+  std::array<char, 48> detail{};  // formatted value in display units, NUL-terminated
 
   [[nodiscard]] std::string_view detail_view() const noexcept { return detail.data(); }
 };
@@ -39,11 +39,17 @@ struct Alert {
 constexpr std::size_t kMaxAlerts = telemetry::kMaxFaults + 1;  // faults plus the comms banner
 using AlertList = utils::FixedVector<Alert, kMaxAlerts>;
 
-/// `frame` may be null. `age_ms` is the time since the last good frame; ignored when live.
-/// Values in the banners are shown in `units`.
+/// Builds the banner list for this frame: one per fault, sorted Alarm > Caution > Neutral and
+/// stable within a level, or a single "No telemetry" banner when the link is not live.
+///
+/// @param frame the latest frame; may be null
+/// @param live whether the link is live; when false the fault list is not consulted
+/// @param age_ms time since the last good frame, shown in the comms banner; ignored when live
+/// @param units display units for the values in the banners
 [[nodiscard]] AlertList collect_alerts(const telemetry::Frame* frame, bool live, std::uint64_t age_ms,
                                        Units units = {}) noexcept;
 
+/// Stacks the banners from the top of the well down, in list order.
 void draw_alerts(Canvas* vg, const Rect& well, const Theme& t, const Fonts& f, const AlertList& alerts) noexcept;
 
 /// Status-bar chip for the top alert, right-aligned at `right_x`. Draws nothing when clear.

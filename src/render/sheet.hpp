@@ -1,3 +1,7 @@
+// Sheet — the settings surface that fills the CarPlay well: a root list and five pages one
+// level deep (spec §5.5, "surface slot"). Geometry is computed once per page from the well rect;
+// a control's rect is empty on pages where it does not exist, which is also how hit_test()
+// knows what is present.
 #pragma once
 
 #include "audio/audio_state.hpp"
@@ -115,15 +119,15 @@ constexpr std::size_t kSheetControlCount = static_cast<std::size_t>(SheetControl
 struct SheetLayout {
   Page kind = Page::None;
   Rect well;
-  platform::Size panel;
+  platform::Size panel;                           // shown on the System page
   float scale = 1.0F;                             // well pixels per mockup unit (1520-wide reference)
-  Rect frame;                                     // the whole well
-  std::array<Rect, kSheetControlCount> controls;  // empty rect = not on this page
+  Rect frame;                                     // the whole well; zero for Page::None
+  std::array<Rect, kSheetControlCount> controls;  // indexed by SheetControl; empty rect = not on this page
 
   // draw-side geometry
-  std::array<Rect, 6> cards;
+  std::array<Rect, 6> cards;  // the page's cards, in draw order; `card_count` are used
   std::size_t card_count = 0;
-  Rect preset_group;
+  Rect preset_group;  // segmented containers around their buttons
   Rect theme_group;
   Rect temp_group;
   Rect press_group;
@@ -133,26 +137,36 @@ struct SheetLayout {
   Rect banner;   // calibration placeholder banner
   Rect powered;  // "powered by" row
 
+  /// Lays out `kind` inside `well`. Page::None and Page::Count yield an empty layout.
   [[nodiscard]] static SheetLayout compute(Page kind, const Rect& well, platform::Size panel) noexcept;
+
+  /// The control under (x, y), if any. A slider's target includes the label row above its
+  /// track, because that is where the finger lands when aiming at the caption.
   [[nodiscard]] std::optional<SheetControl> hit_test(float x, float y) const noexcept;
+
   [[nodiscard]] const Rect& rect(SheetControl c) const noexcept { return controls[static_cast<std::size_t>(c)]; }
+
+  /// Whether `c` exists on this page.
   [[nodiscard]] bool has(SheetControl c) const noexcept { return rect(c).w > 0.0F; }
 };
 
+/// What the sheet shows this frame. Nothing here is mutated by drawing.
 struct SheetModel {
   audio::AudioState audio;
   Settings settings;
   std::optional<SheetControl> pressed;
-  telemetry::LinkState link = telemetry::LinkState::NoData;
+  telemetry::LinkState link = telemetry::LinkState::NoData;  // root row hint and System page
   // calibration page: raw counts beside table and MCU values
-  const telemetry::CalibrationTable* calibration = nullptr;
-  const telemetry::Frame* frame = nullptr;  // may be null
-  bool live = false;
+  const telemetry::CalibrationTable* calibration = nullptr;  // null reads as a placeholder table
+  const telemetry::Frame* frame = nullptr;                   // may be null
+  bool live = false;                                         // false: the calibration numerals show dashes
 };
 
 /// One layout per Page, indexed by the enumerator; computed once at init.
 using PageLayouts = std::array<SheetLayout, kPageCount>;
 [[nodiscard]] PageLayouts compute_pages(const Layout& layout) noexcept;
+
+/// Draws page `sl.kind` with `m`. Page::None draws nothing.
 
 void draw_sheet(Canvas* vg, const SheetLayout& sl, const Theme& t, const Fonts& f, const SheetModel& m) noexcept;
 

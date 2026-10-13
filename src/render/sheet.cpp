@@ -20,8 +20,8 @@ namespace c3::render {
 namespace {
 
 // Reference geometry, mockup units (well 1520 wide, 1392 tall).
-constexpr float kRefW = 1520.0F;
-constexpr float kRadius = 28.0F;
+constexpr float kRefW = kReferenceContentW;
+constexpr float kRadius = kWellRadius;
 constexpr float kPadTop = 32.0F;
 constexpr float kPadSide = 40.0F;
 constexpr float kPadBottom = 40.0F;
@@ -64,7 +64,8 @@ constexpr float kNavSubTracking = 1.8F;  // .08em × 22
 constexpr std::string_view kBuild = "c3console dev";
 constexpr std::string_view kMiddleDot = " \xC2\xB7 ";
 
-// Top-down placement inside a card's content area.
+// Top-down placement inside a card's content area: take() hands out the next rect of the given
+// height (in mockup units) and gap() skips space, so a page reads like the mockup's CSS flow.
 struct Column {
   float x;
   float y;
@@ -319,6 +320,7 @@ struct PageText {
 // drawing helpers
 // ---------------------------------------------------------------------------
 
+// What every page drawer needs: the canvas, theme, fonts and the sheet's scale.
 struct Ctx {
   Canvas* vg;
   const Theme& t;

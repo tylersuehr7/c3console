@@ -6,7 +6,8 @@ namespace c3::render {
 
 namespace {
 
-// Reference geometry (mockup, 1600 × 2560).
+// Reference geometry (mockup, 1600 × 2560). Vertical positions scale with the panel height,
+// horizontal ones with the width.
 constexpr float kMargin = 40.0F;
 constexpr float kStatusH = 88.0F;
 constexpr float kWellY = 100.0F;
@@ -19,16 +20,21 @@ constexpr float kDockY = 2128.0F;
 constexpr float kDockH = 392.0F;
 constexpr float kLeverH = 36.0F;
 constexpr float kTileGap = 16.0F;
-constexpr float kAlign = 16.0F;
+constexpr float kAlign = 16.0F;  // well snap, both axes
 
+static_assert(kReferenceW - 2 * kMargin == kReferenceContentW);
+
+/// Rounds to a whole pixel.
 [[nodiscard]] float px(float v) noexcept {
   return std::round(v);
 }
 
+/// Largest multiple of kAlign not above `v`.
 [[nodiscard]] float align_down(float v) noexcept {
   return std::floor(v / kAlign) * kAlign;
 }
 
+/// A rect with every coordinate rounded to a whole pixel.
 [[nodiscard]] Rect rounded(float x, float y, float w, float h) noexcept {
   return {.x = px(x), .y = px(y), .w = px(w), .h = px(h)};
 }

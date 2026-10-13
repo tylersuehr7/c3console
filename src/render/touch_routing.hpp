@@ -24,6 +24,11 @@ struct RoutedTouch {
   float y = 0.0F;
 };
 
+/// Routes a single point. `carplay_active` is false while another surface occupies the well,
+/// in which case every point is ours.
+///
+/// @return Well with well-local coordinates when the point is inside the well; otherwise Ui
+///         with the panel coordinates unchanged
 [[nodiscard]] constexpr RoutedTouch route_touch(const Layout& layout, float x, float y,
                                                 bool carplay_active = true) noexcept {
   if (carplay_active && layout.well.contains(x, y)) {
@@ -34,12 +39,20 @@ struct RoutedTouch {
 
 struct RoutedGesture {
   TouchTarget target;
-  platform::TouchEvent event;
+  platform::TouchEvent event;  // coordinates as RoutedTouch: well-local and clamped for Well
 };
 
+/// Captures one gesture at a time. The recipient is decided at Down and kept until Up or
+/// Cancel: crossing the well boundary does not transfer the gesture, and a second finger while
+/// one is down is ignored (spec §5.5). Hot path: no allocation.
 class TouchRouter {
 public:
-  // A surface takeover cancels the old gesture; its later release has no new recipient.
+  /// Records which surface occupies the well. Changing surface mid-gesture cancels the gesture:
+  /// the returned event is the last routed one with its phase set to Cancel, and the finger's
+  /// eventual Up is suppressed because it has no recipient.
+  ///
+  /// @param surface an opaque id for the occupant; any value, compared for change only
+  /// @return the Cancel to deliver, or nullopt if nothing was in progress or nothing changed
   [[nodiscard]] std::optional<RoutedGesture> set_surface(unsigned surface) noexcept {
     if (surface == surface_) {
       return std::nullopt;
@@ -56,6 +69,11 @@ public:
     return cancelled;
   }
 
+  /// Routes one event. Down starts a gesture when none is active; Move, Up and Cancel are
+  /// routed only for the active finger id. For a Well gesture the coordinates are made
+  /// well-local and clamped inside the well, so CarPlay never sees a point outside its surface.
+  ///
+  /// @return the event to deliver with its target, or nullopt if it belongs to no gesture
   [[nodiscard]] std::optional<RoutedGesture> route(const Layout& layout, const platform::TouchEvent& event,
                                                    bool carplay_active) noexcept {
     if (event.phase == platform::TouchPhase::Down) {
@@ -84,7 +102,7 @@ public:
 
 private:
   unsigned surface_ = 0;
-  std::optional<RoutedGesture> active_;
+  std::optional<RoutedGesture> active_;  // the captured gesture, holding its last routed event
 };
 
 }  // namespace c3::render

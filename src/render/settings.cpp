@@ -7,7 +7,7 @@
 
 namespace c3::render {
 
-render::Theme make_theme(const Settings& s, bool headlights) noexcept {
+Theme make_theme(const Settings& s, bool headlights) noexcept {
   Theme t = effective_dark(s, headlights) ? Theme::dark() : Theme::light();
   t.set_accent(rgb(s.accent));
   return t;

@@ -32,9 +32,11 @@ struct Units {
   [[nodiscard]] constexpr bool operator==(const Units&) const noexcept = default;
 };
 
+/// Converts the MCU's °F to the display unit.
 [[nodiscard]] constexpr float to_display_temp(TempUnit u, float deg_f) noexcept {
   return u == TempUnit::Celsius ? (deg_f - 32.0F) * 5.0F / 9.0F : deg_f;
 }
+/// Converts the MCU's psi to the display unit.
 [[nodiscard]] constexpr float to_display_pressure(PressureUnit u, float psi) noexcept {
   return u == PressureUnit::Bar ? psi * 0.0689476F : psi;
 }
@@ -50,6 +52,7 @@ struct UnitScale {
   float zone_hi;
 };
 
+/// Coolant arc: 100–260 °F with the red zone from 235, or 40–120 °C from 113 (mockup).
 [[nodiscard]] constexpr UnitScale temp_scale(TempUnit u) noexcept {
   if (u == TempUnit::Celsius) {
     return {.unit =
@@ -73,6 +76,7 @@ struct UnitScale {
           .zone_hi = 260.0F};
 }
 
+/// Oil arc: 0–80 psi with the low zone to 12, or 0–6 bar to 0.8 (mockup).
 [[nodiscard]] constexpr UnitScale pressure_scale(PressureUnit u) noexcept {
   if (u == PressureUnit::Bar) {
     return {.unit = "bar", .min = 0.0F, .max = 6.0F, .major = 1.5F, .decimals = 1, .zone_lo = 0.0F, .zone_hi = 0.8F};
