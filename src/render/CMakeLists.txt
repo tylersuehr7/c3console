@@ -1,6 +1,7 @@
 set(SOURCES 
     alerts.cpp
     brand.cpp
+    camera_surface.cpp
     fonts.cpp
     icons.cpp
     layout.cpp
