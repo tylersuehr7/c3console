@@ -1,4 +1,5 @@
 set(SOURCES 
+    alerts.cpp
     brand.cpp
     fonts.cpp
     icons.cpp
