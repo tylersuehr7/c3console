@@ -1,9 +1,13 @@
 find_package(Threads REQUIRED)
 add_library(c3_app STATIC
     args.cpp
+    background_io.cpp
     config.cpp
     dock_controller.cpp
+    event_loop.cpp
+    headless.cpp
     mock_command_sink.cpp
+    render_loop.cpp
     sensor_source_factory.cpp
     toml.cpp
     settings_store.cpp

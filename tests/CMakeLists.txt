@@ -17,12 +17,14 @@ include(Catch)
 add_executable(c3console_tests
     test_main.cpp
     test_args.cpp
+    test_background_io.cpp
     test_config.cpp
     test_calibration.cpp
     test_crc16.cpp
     test_csv_codec.cpp
     test_csv_recorder.cpp
     test_dock_controller.cpp
+    test_event_loop.cpp
     test_fault_codes.cpp
     test_file_watchdog.cpp
     test_fixed_format.cpp
@@ -30,6 +32,7 @@ add_executable(c3console_tests
     test_fixed_vector.cpp
     test_flat_json.cpp
     test_gui_rendering.cpp
+    test_headless.cpp
     test_join_enum_names.cpp
     test_linear_curve.cpp
     test_log.cpp
@@ -41,6 +44,7 @@ add_executable(c3console_tests
     test_parse_enum_name.cpp
     test_parse_number.cpp
     test_protocol.cpp
+    test_render_loop.cpp
     test_replay_source.cpp
     test_sensor_source_factory.cpp
     test_settings_store.cpp
