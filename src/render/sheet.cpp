@@ -555,7 +555,7 @@ void draw_theme(const Ctx& c, const SheetLayout& sl, const SheetModel& m) noexce
   }
   // theme
   control_label(c, sl.theme_group, "THEME");
-  constexpr std::array<std::string_view, 3> kThemeCaptions = {"Dark", "Light", "Auto \xC2\xB7 lamps"};
+  constexpr std::array<std::string_view, 3> kThemeCaptions = {"Dark", "Light", "Auto"};
   segments(c, sl, m, sl.theme_group, SheetControl::ThemeDark, kThemeCaptions, static_cast<std::size_t>(st.theme));
   card_note(c, sl.cards[0], sl.theme_group.bottom() + kItemGap * c.s,
             "Auto follows the headlamp relay: light by day, dark once the lamps are on. The "
