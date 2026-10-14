@@ -56,7 +56,7 @@ add_subdirectory(src/app)        # Orchestration; exceptions are confined to sta
 # Executable
 # ---------------------------------------------------------------------------
 add_executable(c3console src/main.cpp)
-target_link_libraries(c3console PRIVATE c3_warnings c3_log c3_vehicle c3_app)
+target_link_libraries(c3console PRIVATE c3_warnings c3_log c3_vehicle c3_app c3_platform_common)
 target_link_libraries(c3console PUBLIC nanovg)
 
 if(C3_BACKEND STREQUAL "desktop")
