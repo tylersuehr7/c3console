@@ -90,20 +90,6 @@ constexpr std::string_view kDefaultConfig = "config/console.toml";
   return out;
 }
 
-// The log level names console.toml accepts; the logger's own to_string() is for output.
-[[nodiscard]] constexpr std::optional<logging::Level> parse_level(std::string_view text) noexcept {
-  if (text == "debug") {
-    return logging::Level::Debug;
-  } else if (text == "info") {
-    return logging::Level::Info;
-  } else if (text == "warn") {
-    return logging::Level::Warn;
-  } else if (text == "error") {
-    return logging::Level::Error;
-  }
-  return std::nullopt;
-}
-
 }  // namespace
 
 std::optional<Backend> parse_backend(std::string_view s) noexcept {
@@ -112,6 +98,10 @@ std::optional<Backend> parse_backend(std::string_view s) noexcept {
 
 std::optional<Source> parse_source(std::string_view s) noexcept {
   return utils::parse_enum(s, kAllSources);
+}
+
+std::optional<logging::Level> parse_log_level(std::string_view s) noexcept {
+  return utils::parse_enum(s, logging::kAllLevels);
 }
 
 std::string find_project_path(std::string_view relative, std::string_view argv0) {
@@ -188,7 +178,14 @@ void load_toml(Config& cfg, const std::string& path) {
 
   cfg.calibration_file = toml::get_string(doc, "calibration", "file", cfg.calibration_file);
   cfg.assets_dir = toml::get_string(doc, "display", "assets_dir", cfg.assets_dir);
-  cfg.log_level = toml::get_string(doc, "logging", "level", cfg.log_level);
+
+  const std::string level = toml::get_string(doc, "logging", "level", std::string(logging::to_string(cfg.log_level)));
+  const auto parsed_level = parse_log_level(level);
+  if (!parsed_level) {
+    throw std::runtime_error("[logging] level: expected " + utils::join_names(logging::kAllLevels, "|") + ", got '" +
+                             level + "'");
+  }
+  cfg.log_level = *parsed_level;
 }
 
 // Every rule names the field the way the file spells it, so the message is also the fix.
@@ -219,9 +216,6 @@ std::optional<std::string> validate(const Config& cfg) {
   }
   if (cfg.source == Source::Mock && !telemetry::parse_mock_profile(cfg.mock_profile)) {
     return "mock_profile '" + cfg.mock_profile + "' is not one of: " + mock_profile_names();
-  }
-  if (!parse_level(cfg.log_level)) {
-    return "[logging] level: expected debug|info|warn|error, got '" + cfg.log_level + "'";
   }
   return std::nullopt;
 }
@@ -276,7 +270,7 @@ std::string describe(const Config& cfg) {
      << "alsa_mic         = " << cfg.alsa_mic << '\n'
      << "assets_dir       = " << cfg.assets_dir << '\n'
      << "calibration_file = " << cfg.calibration_file << '\n'
-     << "log_level        = " << cfg.log_level << '\n';
+     << "log_level        = " << logging::to_string(cfg.log_level) << '\n';
 
   return os.str();
 }

@@ -6,6 +6,7 @@
 #pragma once
 
 #include "args.hpp"
+#include "logging/log.hpp"
 #include "render/settings.hpp"
 
 #include <array>
@@ -43,6 +44,8 @@ constexpr std::array<Source, 3> kAllSources = {Source::Mock, Source::Replay, Sou
 
 [[nodiscard]] std::optional<Source> parse_source(std::string_view s) noexcept;
 
+[[nodiscard]] std::optional<logging::Level> parse_log_level(std::string_view s) noexcept;
+
 struct Config {
   // display
   Backend backend = Backend::Desktop;
@@ -79,8 +82,8 @@ struct Config {
 
   // files
   std::string calibration_file = "config/calibration.json";
-  std::string assets_dir = "assets";  // fonts; resolved like the config path
-  std::string log_level = "info";
+  std::string assets_dir = "assets";                // fonts; resolved like the config path
+  logging::Level log_level = logging::Level::Info;  // parsed from `[logging] level` by load_toml()
 
   // run mode
   std::optional<std::uint32_t> headless_seconds;  // set by --headless; 0 = until interrupted
@@ -100,12 +103,13 @@ struct Config {
 /// Explicit --config wins; otherwise find_project_path("config/console.toml").
 [[nodiscard]] std::string find_config_path(const std::optional<std::string>& explicit_path, std::string_view argv0);
 
-/// Overlay values from a TOML file onto `cfg`.
-/// Throws std::runtime_error (unreadable file, wrong-typed value) or toml::ParseError.
+/// Overlay values from a TOML file onto `cfg`. Enumerated values (backend, source, theme, units,
+/// log level) are parsed here, so a Config never carries an unrecognised word.
+/// Throws std::runtime_error (unreadable file, wrong-typed or unknown value) or toml::ParseError.
 void load_toml(Config& cfg, const std::string& path);
 
-/// Range and consistency checks, including the log level and, for the mock source, the profile
-/// name. Returns the first problem in field order, or nullopt when the config is usable.
+/// Range and consistency checks, including, for the mock source, the profile name.
+/// Returns the first problem in field order, or nullopt when the config is usable.
 [[nodiscard]] std::optional<std::string> validate(const Config& cfg);
 
 /// Human-readable dump, one `key = value` per line.

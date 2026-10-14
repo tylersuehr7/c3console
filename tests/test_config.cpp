@@ -2,6 +2,7 @@
 #include "app/args.hpp"
 #include "app/config.hpp"
 #include "app/toml.hpp"
+#include "logging/log.hpp"
 #include "render/settings.hpp"
 #include "render/units.hpp"
 #include "telemetry/freshness.hpp"
@@ -35,12 +36,15 @@ using c3::app::kAllBackends;
 using c3::app::kAllSources;
 using c3::app::load_toml;
 using c3::app::parse_backend;
+using c3::app::parse_log_level;
 using c3::app::parse_source;
 using c3::app::resolve_config;
 using c3::app::ResolveStatus;
 using c3::app::Source;
 using c3::app::to_string;
 using c3::app::validate;
+using c3::logging::kAllLevels;
+using c3::logging::Level;
 using c3::render::PressureUnit;
 using c3::render::TempUnit;
 using c3::render::ThemePreference;
@@ -179,7 +183,7 @@ TEST_CASE("config: the defaults are the development desktop at the mockup geomet
   CHECK(cfg.settings_file.empty());
   CHECK(cfg.watchdog_device.empty());
   CHECK(cfg.calibration_file == "config/calibration.json");
-  CHECK(cfg.log_level == "info");
+  CHECK(cfg.log_level == Level::Info);
   CHECK_FALSE(cfg.headless_seconds.has_value());
   CHECK_FALSE(cfg.screenshot_path.has_value());
   CHECK(cfg.screenshot_after_s == 0.5F);
@@ -239,16 +243,22 @@ TEST_CASE("validate: the mock profile is checked only for the mock source and th
   CHECK(validate(Config{.source = Source::Mock, .mock_profile = "warmupdrive"}).has_value());  // case-sensitive
 }
 
-TEST_CASE("validate: the log level is one of four words", "[config]") {
-  for (const char* level : {"debug", "info", "warn", "error"}) {
-    CHECK_FALSE(validate(Config{.log_level = level}).has_value());
+TEST_CASE("parse_log_level: maps the four config words onto logger levels, exactly", "[config]") {
+  STATIC_CHECK(kAllLevels.size() == 4);
+  CHECK(parse_log_level("debug") == Level::Debug);
+  CHECK(parse_log_level("info") == Level::Info);
+  CHECK(parse_log_level("warn") == Level::Warn);
+  CHECK(parse_log_level("error") == Level::Error);
+  for (const Level level : kAllLevels) {  // spelled by the logger, so the round trip is exact
+    CHECK(parse_log_level(c3::logging::to_string(level)) == level);
   }
-  CHECK(validate(Config{.log_level = "INFO"}) == "[logging] level: expected debug|info|warn|error, got 'INFO'");
-  CHECK(validate(Config{.log_level = "trace"}) == "[logging] level: expected debug|info|warn|error, got 'trace'");
+  CHECK_FALSE(parse_log_level("INFO").has_value());
+  CHECK_FALSE(parse_log_level("warning").has_value());
+  CHECK_FALSE(parse_log_level("").has_value());
 }
 
 TEST_CASE("validate: reports the first problem in field order", "[config]") {
-  CHECK(validate(Config{.width = 0, .rotation = 7, .log_level = "x"}) == "display width/height must be positive");
+  CHECK(validate(Config{.width = 0, .rotation = 7, .stall_timeout_ms = 0}) == "display width/height must be positive");
 }
 
 // ---------------------------------------------------------------------------
@@ -284,7 +294,7 @@ TEST_CASE("load_toml: every supported key overlays its field and the path is rec
   CHECK(cfg.settings_file == "/data/settings.toml");
   CHECK(cfg.watchdog_device == "/dev/watchdog");
   CHECK(cfg.calibration_file == "/data/calibration.json");
-  CHECK(cfg.log_level == "debug");
+  CHECK(cfg.log_level == Level::Debug);
   CHECK_FALSE(validate(cfg).has_value());
 }
 
@@ -300,6 +310,14 @@ TEST_CASE("load_toml: an empty file leaves every default in place", "[config]") 
   CHECK(loaded.log_level == expected.log_level);
   CHECK(loaded.mock_profile == expected.mock_profile);
   CHECK(describe(loaded) == describe(expected));
+}
+
+TEST_CASE("load_toml: the log level is read as a logger level, not kept as text", "[config]") {
+  const ScratchDir dir;
+  for (const Level level : kAllLevels) {
+    const std::string toml = "[logging]\nlevel = \"" + std::string(c3::logging::to_string(level)) + "\"\n";
+    CHECK(load(dir, toml).log_level == level);
+  }
 }
 
 TEST_CASE("load_toml: a partial file overlays only what it names", "[config]") {
@@ -326,6 +344,10 @@ TEST_CASE("load_toml: unknown enumeration values name the key and the choices", 
                        Message("[telemetry] source: expected mock|replay|uart, got 'serial'"));
   CHECK_THROWS_MATCHES(load_toml(cfg, dir.file("c.toml", "[ui]\ntheme = \"sepia\"\n")), std::runtime_error,
                        Message("[ui] theme: expected dark|light|auto, got 'sepia'"));
+  CHECK_THROWS_MATCHES(load_toml(cfg, dir.file("d.toml", "[logging]\nlevel = \"INFO\"\n")), std::runtime_error,
+                       Message("[logging] level: expected debug|info|warn|error, got 'INFO'"));
+  CHECK_THROWS_MATCHES(load_toml(cfg, dir.file("e.toml", "[logging]\nlevel = \"trace\"\n")), std::runtime_error,
+                       Message("[logging] level: expected debug|info|warn|error, got 'trace'"));
 }
 
 TEST_CASE("load_toml: wrongly typed values are reported with section, key and expected type", "[config]") {
@@ -429,6 +451,7 @@ TEST_CASE("describe: lists one key per line with hex ids and the source-specific
   CHECK_THAT(text, ContainsSubstring("ui               = dark, accent #FF6A2B, F, psi\n"));
   CHECK_THAT(text, ContainsSubstring("settings_file    = (in memory)\n"));
   CHECK_THAT(text, ContainsSubstring("watchdog_device  = (none)\n"));
+  CHECK_THAT(text, ContainsSubstring("log_level        = info\n"));
   CHECK_THAT(text, !ContainsSubstring("replay_file"));
   CHECK_THAT(text, !ContainsSubstring("uart_device"));
   CHECK_THAT(text, !ContainsSubstring("record_file"));

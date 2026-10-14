@@ -2,12 +2,14 @@
 
 #include "utils/fixed_text.hpp"
 
+#include <array>
 #include <cstdint>
 #include <string_view>
 
 namespace c3::logging {
 
 enum class Level : uint8_t { Debug = 0, Info, Warn, Error };
+constexpr std::array<Level, 4> kAllLevels = {Level::Debug, Level::Info, Level::Warn, Level::Error};
 
 constexpr std::string_view to_string(Level level) noexcept {
   switch (level) {
