@@ -1,0 +1,46 @@
+# C3 Console — runtime configuration.
+# Read once at startup. CLI flags override anything here.
+# Values are a subset of TOML: [sections], key = value, strings, ints (0x hex ok),
+# floats, booleans, and single-line arrays of scalars.
+
+[display]
+backend = "desktop"          # desktop | drm
+width = 1600                 # 800 × 1280 panel drawn @2x (docs/c3-console-ui-design.md); the DRM build follows the mode
+height = 2560
+dpi = 264                    # target panel; type and touch targets scale from this
+drm_device = "/dev/dri/card0"
+rotation = 0                 # panel mounting rotation, clockwise: 0 | 90 | 180 | 270 (target only)
+assets_dir = "assets"           # fonts; found like the config file (cwd, then next to the binary)
+
+[telemetry]
+source = "mock"              # mock | replay | uart
+uart_device = "/dev/ttyAMA0"
+baud = 115200
+stall_timeout_ms = 1000      # spec §4.3: gauges grey out after 1 s without a frame
+mock_profile = "WarmupDrive" # ColdStart | WarmupDrive | HotIdle | HighwayCruise | fault profiles
+replay_file = ""
+record_file = ""             # CSV of every accepted frame (spec §9.3); --record=PATH overrides
+
+[carplay]
+usb_vendor_id = 0x1314       # Carlinkit. Confirm with lsusb before writing the udev rule.
+usb_product_ids = [0x1520, 0x1521]   # both exist in the wild; enumerate, never hardcode one
+
+[ui]
+theme = "dark"               # dark | light | auto (auto follows the headlamp relay)
+accent = 0xFF6A2B            # Ember; the settings sheet offers 9 swatches or any hue
+temperature = "F"            # F | C
+pressure = "psi"             # psi | bar
+settings_file = ""           # rewritten on every change; target: /data/settings.toml. Empty = in memory
+
+[platform]
+watchdog_device = ""         # target: /dev/watchdog (bcm2835_wdt, spec §5.6); kicked once per rendered frame
+
+[audio]
+alsa_out = "default"         # HiFiBerry Digi+ Pro, SPDIF
+alsa_mic = "default"
+
+[calibration]
+file = "config/calibration.json"
+
+[logging]
+level = "debug"               # debug | info | warn | error
