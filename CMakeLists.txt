@@ -72,5 +72,6 @@ endif()
 # ---------------------------------------------------------------------------
 if(C3_BUILD_TESTS)
     enable_testing()
+    add_subdirectory(firmware/esp32/lib/c3fw)  # MCU pure logic, host-built so the tests can run it against the Pi codecs
     add_subdirectory(tests)
 endif()

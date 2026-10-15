@@ -27,6 +27,9 @@ add_executable(c3console_tests
     test_event_loop.cpp
     test_fault_codes.cpp
     test_file_watchdog.cpp
+    test_firmware_codec.cpp
+    test_firmware_faults.cpp
+    test_firmware_filters.cpp
     test_fixed_format.cpp
     test_fixed_text.cpp
     test_fixed_vector.cpp
@@ -59,10 +62,11 @@ add_executable(c3console_tests
     test_well_controller.cpp)
 
 # c3_render carries c3_vehicle, c3_telemetry and nanovg publicly; c3_app carries c3_log and
-# c3_telemetry. The backend-neutral part of the platform module is always linked; the backend
-# libraries are gated below.
+# c3_telemetry; c3_firmware is the MCU's pure logic (firmware/esp32/lib/c3fw). The backend-neutral
+# part of the platform module is always linked; the backend libraries are gated below.
 target_link_libraries(c3console_tests PRIVATE
     c3_app
+    c3_firmware
     c3_render
     c3_vehicle
     c3_telemetry

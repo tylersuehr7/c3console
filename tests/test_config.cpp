@@ -427,10 +427,19 @@ TEST_CASE("find_project_path: returns the relative path unchanged when nothing i
 
 TEST_CASE("find_config_path: an explicit --config wins even if it does not exist", "[config]") {
   CHECK(find_config_path(std::string("/etc/c3/custom.toml"), "/nowhere/c3console") == "/etc/c3/custom.toml");
+}
+
+TEST_CASE("find_config_path: without --config the shipped file is located like any project path", "[config]") {
   const ScratchDir dir;
   const std::string shipped = dir.file("config/console.toml", "");
   fs::create_directories(dir.path() / "build");
-  CHECK(fs::equivalent(find_config_path(std::nullopt, dir.path_of("build/c3console")), shipped));
+  const std::string found = find_config_path(std::nullopt, dir.path_of("build/c3console"));
+  if (fs::exists("config/console.toml")) {
+    // Run from the repository root, the working-directory copy wins, as it does for the real binary.
+    CHECK(found == "config/console.toml");
+  } else {
+    CHECK(fs::equivalent(found, shipped));
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -1,0 +1,5 @@
+{
+  "name": "c3fw",
+  "version": "0.1.0",
+  "description": "c3console MCU logic: filtering, lookup, fault evaluation, frame and command codecs. No Arduino dependencies; unit-tested on the host through the top-level CMake build. Shared Pi headers come from the project build_flags include path."
+}
