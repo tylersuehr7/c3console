@@ -1,3 +1,5 @@
+![Suehr Studios Logo](../assets/suehr-studios-full-logo.svg)
+
 # C3Console – Build Specification
 
 **Vehicle:** 1975 Chevrolet Corvette Stingray coupe (C3), 350 small-block; L48 or L82.
@@ -422,7 +424,7 @@ The 11" portrait screen covers the factory heater and A/C controls. This is ther
 
 Use relays for the blower, not PWM. It's a 15–20 A inductive load and a high-side driver capable of it is a project in itself. Relays with flyback diodes, done.
 
-**Outputs.** Blower speed 1–4 energises exactly one of four relays on the resistor-pack taps, break-before-make, and speed 0 energises none. The compressor clutch relay is refused while the blower is off. Mode is two vacuum solenoids: floor and defrost energise one each, vent releases both. Outputs change only on a command and hold otherwise (§4.3). The pin map lives in `firmware/esp32/include/pins.h` and is provisional until confirmed against the relay board.
+**Outputs.** Blower speed 1–4 energises exactly one of four relays on the resistor-pack taps, break-before-make, and speed 0 energises none. The compressor clutch relay is refused while the blower is off. Mode is two vacuum solenoids: floor and defrost energise one each, vent releases both. Outputs change only on a command and hold otherwise (§4.3). The pin map lives in `firmware/esp32/include/pins.hpp` and is provisional until confirmed against the relay board.
 
 ### 6.2 Phase two, optional
 

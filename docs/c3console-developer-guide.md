@@ -652,7 +652,7 @@ Arduino `Wire`, UART1, GPIO, and `Preferences` to pure logic in
 [c3fw](../firmware/esp32/lib/c3fw/src/c3fw). Keep hardware APIs out of that pure library so
 faults, filters, commands, and codecs remain executable under host Catch2 tests.
 
-[pins.h](../firmware/esp32/include/pins.h) is explicitly provisional. Current ADC assignment:
+[pins.hpp](../firmware/esp32/include/pins.hpp) is explicitly provisional. Current ADC assignment:
 
 | ADS1115 | Input | Channel |
 | --- | --- | --- |
@@ -704,7 +704,7 @@ frozen measurement.
 
 ### Warning evaluation
 
-[faults.h](../firmware/esp32/lib/c3fw/src/c3fw/faults.h) owns hysteresis. A sender fault suppresses
+[faults.hpp](../firmware/esp32/lib/c3fw/src/c3fw/faults.hpp) owns hysteresis. A sender fault suppresses
 that channel's value fault because its value is not meaningful.
 
 | Fault | Set | Clear |
@@ -746,7 +746,7 @@ finite values. The host requires at least two points, and at least eight **per c
 the file claims `placeholder=false`.
 
 [tools/generate_calibration.py](../tools/generate_calibration.py) generates the MCU placeholder
-[lookup.h](../firmware/esp32/lib/c3fw/src/c3fw/lookup.h) from the shipped JSON. Run it when those
+[lookup.hpp](../firmware/esp32/lib/c3fw/src/c3fw/lookup.hpp) from the shipped JSON. Run it when those
 defaults deliberately change; do not hand-edit generated curve values. The generator is for
 placeholder defaults, not an alternative measured-calibration upload procedure. A host test
 checks that firmware defaults and the JSON agree.
