@@ -27,6 +27,12 @@ ctest --test-dir build --output-on-failure
 
 See the [guide's build instructions](docs/developer-guide.md#4-building-and-running) for dependencies, ARM64 container builds, firmware, recording/replay, and screenshots.
 
+## Demos
+
+https://github.com/user-attachments/assets/88cfd1c4-de34-48db-b6bf-2f98843387d3
+
+---
+
 > ![Suehr Studios Logo](assets/suehr-studios-full-logo.svg)
 >
 > Copyright © 2026 Tyler R. Suehr
